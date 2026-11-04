@@ -1,10 +1,11 @@
 # HomeMate
 
 HomeMate (sull'icona "Casa mia") è la pagina di casa: orologio, meteo, notizie e lista della spesa. Si apre da ovunque e si installa sul telefono come app.
-La parte di domotica (tapparelle, Tado, luci) arriverà in una versione che funziona solo dal Wi-Fi di casa.
+La domotica (tapparelle e luci Shelly) funziona solo nella **versione di casa**, che gira sul tablet e risponde solo dal Wi-Fi di casa.
 
 - **Sito**: https://lucaalbanesi.github.io/homemate/
-- **Sul tablet** (Fully Kiosk): aggiungi `?kiosk` all'indirizzo per avere schermo a riposo e grandezza adattata.
+- **Versione di casa**: http://192.168.1.47:8080 dai dispositivi sul Wi-Fi di casa; sul tablet `http://localhost:8080/?kiosk`.
+- **Prova da fuori casa**: https://lucaalbanesi.github.io/homemate/#prova mostra anche la sezione Casa con dispositivi simulati.
 
 ## Come è fatta
 
@@ -56,6 +57,20 @@ Elenco e menu sono pubblici come tutto il repository: si vede quale municipio e 
 
 Al primo accesso Google mostra "app non verificata": è normale per un'app personale, si continua con Avanzate.
 L'accesso dura circa un'ora; poi la scheda chiede di toccare "Accedi con Google" di nuovo (da migliorare per il tablet).
+
+## Versione di casa (tablet)
+
+Il servizio `tablet/server.mjs` gira in Termux sul tablet, porta 8080. Serve la stessa pagina del sito, in più la sezione Casa:
+legge e comanda le Shelly elencate in `config/casa.json` (tapparelle Plus 2PM con l'API locale, il Dimmer 2 del soggiorno),
+le scene (Buongiorno, Buonanotte, Esco di casa) e prende notizie e menu dal sito online.
+
+- **Installazione o aggiornamento** (in Termux, una riga):
+  `curl -fsSL "https://raw.githubusercontent.com/lucaalbanesi/homemate/main/tablet/installa.sh?t=$(date +%s)" | bash`
+- **Avvio automatico**: installa Termux:Boot da F-Droid e aprilo una volta. Termux, Termux:Boot e Fully Kiosk con batteria "Senza restrizioni".
+- **Aggiornamenti**: a ogni avvio e ogni notte alle 4 il tablet scarica le novità da GitHub e si riavvia da solo.
+- **Registro**: `~/homemate.log` sul tablet (in Termux: `tail -n 30 ~/homemate.log`).
+- **Sicurezza**: non aprire mai la porta 8080 nel router. Chiunque sia sul Wi-Fi di casa può comandare le tapparelle: per gli ospiti usa la rete ospiti.
+- **Indirizzi**: gli indirizzi delle Shelly e del tablet vanno riservati nel router, altrimenti possono cambiare.
 
 ## Prove in locale
 

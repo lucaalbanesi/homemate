@@ -79,3 +79,4 @@ import { update } from "./scuole.mjs";
   assert.throws(() => update(base, "XXX", "Primaria"));
   console.log("Test scuole: ok");
 }
+await import("./test-casa.mjs");

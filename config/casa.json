@@ -1,0 +1,22 @@
+{
+  "nota": "Dispositivi di casa per il servizio sul tablet. Gli indirizzi sono quelli della rete di casa: da internet non portano da nessuna parte.",
+  "tapparelle": [
+    { "id": "soggiorno1", "nome": "Soggiorno 1", "stanza": "Soggiorno", "ip": "192.168.1.146" },
+    { "id": "soggiorno2", "nome": "Soggiorno 2", "stanza": "Soggiorno", "ip": "192.168.1.222" },
+    { "id": "camera1", "nome": "Camera 1", "stanza": "Camera", "ip": "192.168.1.229" },
+    { "id": "camera2", "nome": "Camera 2", "stanza": "Camera", "ip": "192.168.1.217" },
+    { "id": "camera3", "nome": "Camera 3", "stanza": "Camera", "ip": "192.168.1.183" },
+    { "id": "cameretta1", "nome": "Cameretta 1", "stanza": "Cameretta", "ip": "192.168.1.133" },
+    { "id": "cameretta2", "nome": "Cameretta 2", "stanza": "Cameretta", "ip": "192.168.1.3" },
+    { "id": "bagno", "nome": "Bagno", "stanza": "Bagno", "ip": "192.168.1.53" },
+    { "id": "studio", "nome": "Studio", "stanza": "Studio", "ip": "192.168.1.166" }
+  ],
+  "luci": [
+    { "id": "soggiorno", "nome": "Soggiorno", "stanza": "Soggiorno", "ip": "192.168.1.134", "tipo": "dimmer1" }
+  ],
+  "scene": [
+    { "id": "buongiorno", "nome": "Buongiorno", "tapparelle": "apri" },
+    { "id": "buonanotte", "nome": "Buonanotte", "tapparelle": "chiudi", "luci": "spegni" },
+    { "id": "esco", "nome": "Esco di casa", "tapparelle": "chiudi", "luci": "spegni" }
+  ]
+}

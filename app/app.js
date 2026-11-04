@@ -385,8 +385,128 @@
   }
   setInterval(function () { if (token() && !document.activeElement.matches("#addItem")) loadShop(); }, 2 * 60000);
 
+  // ---------- Casa (solo dalla versione di casa sul tablet; #prova la simula da ovunque) ----------
+  var casa = { mode: "", data: null, timer: null, open: null };
+  var PROVA = location.hash === "#prova";
+  function toast(msg) {
+    var t = $("toast"); t.textContent = msg; t.classList.add("show");
+    clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove("show"); }, 2500);
+  }
+  // simulazione per lavorare sul layout da fuori casa: stessi dati e stesse risposte del servizio vero
+  var sim = {
+    data: {
+      casa: true, tapparelle: [["soggiorno1", "Soggiorno 1"], ["soggiorno2", "Soggiorno 2"], ["camera1", "Camera 1"], ["camera2", "Camera 2"], ["camera3", "Camera 3"], ["cameretta1", "Cameretta 1"], ["cameretta2", "Cameretta 2"], ["bagno", "Bagno"], ["studio", "Studio"]]
+        .map(function (t, i) { return { id: t[0], nome: t[1], online: i !== 7, pos: [100, 100, 60, 100, 100, 100, 50, null, 0][i], state: "stopped" }; }),
+      luci: [{ id: "soggiorno", nome: "Soggiorno", online: true, on: true, brightness: 70 }],
+      scene: [{ id: "buongiorno", nome: "Buongiorno" }, { id: "buonanotte", nome: "Buonanotte" }, { id: "esco", nome: "Esco di casa" }]
+    },
+    post: function (path, body) {
+      var d = sim.data, m = path.split("/"), kind = m[3], id = m[4];
+      var setT = function (t, a, p) { if (!t.online) return; t.pos = a === "apri" ? 100 : a === "chiudi" ? 0 : a === "posizione" ? p : t.pos; };
+      if (kind === "tapparelle") d.tapparelle.forEach(function (t) { if (id === "tutte" || t.id === id) setT(t, body.azione, body.pos); });
+      if (kind === "luci") d.luci.forEach(function (l) { if (l.id === id) { if (body.on !== undefined) l.on = body.on; if (body.brightness !== undefined) l.brightness = body.brightness; } });
+      if (kind === "scene") { var a = id === "buongiorno" ? "apri" : "chiudi"; d.tapparelle.forEach(function (t) { setT(t, a); }); if (id !== "buongiorno") d.luci.forEach(function (l) { l.on = false; }); }
+      var err = (kind === "scene" || id === "tutte") ? ["Bagno: non risponde"] : [];
+      return Promise.resolve(Object.assign({ ok: !err.length, errori: err }, JSON.parse(JSON.stringify(d))));
+    }
+  };
+  function casaGet() {
+    if (casa.mode === "prova") return Promise.resolve(JSON.parse(JSON.stringify(sim.data)));
+    return fetch("api/casa", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (d) { if (!d || !d.casa) throw 0; return d; });
+  }
+  function casaPost(path, body) {
+    if (casa.mode === "prova") return sim.post(path, body || {});
+    return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
+      .then(function (r) { return r.json().catch(function () { return { ok: false, errori: ["risposta non valida"] }; }); });
+  }
+  function shutterText(t) {
+    if (t.online === false) return "Non risponde";
+    if (t.online == null) return "…";
+    if (t.state === "opening") return "In apertura…";
+    if (t.state === "closing") return "In chiusura…";
+    if (t.pos == null) return "Posizione sconosciuta";
+    if (t.pos >= 99) return "Aperta";
+    if (t.pos <= 1) return "Chiusa";
+    return t.pos + "% aperta";
+  }
+  function lightText(l) { if (l.online === false) return "Non risponde"; return l.on ? "Accesa" + (l.brightness != null ? " · " + l.brightness + "%" : "") : "Spenta"; }
+  function renderCasa() {
+    var d = casa.data; if (!d) return;
+    var ts = d.tapparelle || [], open = 0, closed = 0, half = 0, off = 0;
+    ts.forEach(function (t) { if (t.online === false) off++; else if (t.pos >= 99) open++; else if (t.pos <= 1) closed++; else half++; });
+    var summary = open + " aperte · " + half + " a metà · " + closed + " chiuse" + (off ? " · " + off + " non risponde" : "");
+    $("casaBody").innerHTML =
+      '<div class="scenes">' + (d.scene || []).map(function (sc) { return '<button class="scene" data-scene="' + esc(sc.id) + '">' + esc(sc.nome) + "</button>"; }).join("") + "</div>" +
+      '<div class="block" style="margin-top:0"><div class="block-title"><strong>Tapparelle</strong><span>' + summary + "</span></div>" +
+      '<div class="pair"><button data-all="apri">Apri tutte</button><button data-all="chiudi">Chiudi tutte</button></div>' +
+      '<div class="tiles">' + ts.map(function (t) {
+        var mv = t.state === "opening" || t.state === "closing";
+        return '<button class="tile' + (t.online === false ? " off" : "") + (mv ? " moving" : "") + '" data-tap="' + esc(t.id) + '"><span class="nm">' + esc(t.nome) + '</span><span class="st">' + shutterText(t) + '</span><span class="bar"><i style="width:' + (t.pos == null ? 0 : t.pos) + '%"></i></span></button>';
+      }).join("") + "</div></div>" +
+      ((d.luci || []).length ? '<div class="block"><div class="block-title"><strong>Luci</strong><span>' + d.luci.filter(function (l) { return l.on; }).length + " accese su " + d.luci.length + "</span></div>" +
+        '<div class="tiles">' + d.luci.map(function (l) {
+          return '<button class="tile' + (l.on ? " on" : "") + (l.online === false ? " off" : "") + '" data-light="' + esc(l.id) + '"><span class="nm">' + esc(l.nome) + '</span><span class="st">' + lightText(l) + "</span></button>";
+        }).join("") + "</div></div>" : "");
+    if (casa.open) casa.open();
+    fitSoon();
+  }
+  function after(res, ok) {
+    if (res && res.tapparelle) { casa.data = res; renderCasa(); }
+    if (res && res.errori && res.errori.length) toast("Fatto, tranne: " + res.errori.join(", "));
+    else if (ok) toast(ok);
+    setTimeout(pollCasa, 1500);
+  }
+  function shutterSheet(id) {
+    var t = (casa.data.tapparelle || []).filter(function (x) { return x.id === id; })[0]; if (!t) return;
+    openModal(t.nome, '<p class="sheet-note" id="shSt">' + shutterText(t) + '</p><div class="ctl"><button class="primary" data-a="apri">Apri</button><button data-a="ferma">Ferma</button><button class="primary" data-a="chiudi">Chiudi</button></div>' +
+      '<div class="ctl"><button data-p="25">25%</button><button data-p="50">50%</button><button data-p="75">75%</button></div>');
+    casa.open = function () { var x = (casa.data.tapparelle || []).filter(function (y) { return y.id === id; })[0]; if (x && $("shSt")) $("shSt").textContent = shutterText(x); };
+    [].forEach.call(document.querySelectorAll("#modalBody [data-a], #modalBody [data-p]"), function (b) {
+      b.addEventListener("click", function () {
+        var body = b.dataset.a ? { azione: b.dataset.a } : { azione: "posizione", pos: Number(b.dataset.p) };
+        casaPost("api/casa/tapparelle/" + encodeURIComponent(id), body).then(function (r) { after(r); });
+      });
+    });
+  }
+  function lightSheet(id) {
+    var l = (casa.data.luci || []).filter(function (x) { return x.id === id; })[0]; if (!l) return;
+    openModal("Luce " + l.nome, '<p class="sheet-note" id="lSt">' + lightText(l) + '</p><div class="ctl" style="grid-template-columns:1fr 1fr"><button class="primary" data-on="1">Accendi</button><button data-on="0">Spegni</button></div>' +
+      '<label for="lBr" class="sheet-note">Intensità</label><input class="range" id="lBr" type="range" min="1" max="100" step="1" value="' + (l.brightness || 50) + '">');
+    casa.open = function () { var x = (casa.data.luci || []).filter(function (y) { return y.id === id; })[0]; if (x && $("lSt")) $("lSt").textContent = lightText(x); };
+    [].forEach.call(document.querySelectorAll("#modalBody [data-on]"), function (b) {
+      b.addEventListener("click", function () { casaPost("api/casa/luci/" + encodeURIComponent(id), { on: b.dataset.on === "1" }).then(function (r) { after(r); }); });
+    });
+    $("lBr").addEventListener("change", function () { casaPost("api/casa/luci/" + encodeURIComponent(id), { on: true, brightness: Number(this.value) }).then(function (r) { after(r); }); });
+  }
+  $("casaBody").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || !casa.data) return;
+    if (b.dataset.scene) { b.disabled = true; casaPost("api/casa/scene/" + encodeURIComponent(b.dataset.scene)).then(function (r) { b.disabled = false; after(r, b.textContent + ": fatto"); }); }
+    else if (b.dataset.all) casaPost("api/casa/tapparelle/tutte", { azione: b.dataset.all }).then(function (r) { after(r, b.dataset.all === "apri" ? "Apro tutte le tapparelle" : "Chiudo tutte le tapparelle"); });
+    else if (b.dataset.tap) shutterSheet(b.dataset.tap);
+    else if (b.dataset.light) lightSheet(b.dataset.light);
+  });
+  $("modalClose").addEventListener("click", function () { casa.open = null; });
+  function pollCasa() {
+    clearTimeout(casa.timer);
+    casaGet().then(function (d) { casa.data = d; renderCasa(); $("casaTag").innerHTML = casa.mode === "prova" ? '<span class="sim">Simulazione</span>' : "aggiornato " + hhmm(); })
+      .catch(function () { $("casaTag").textContent = "non aggiornato"; })
+      .then(function () { casa.timer = setTimeout(pollCasa, document.hidden ? 30000 : 5000); });
+  }
+  function startCasa() {
+    var show = function (mode) {
+      casa.mode = mode;
+      document.body.classList.add("casa"); $("colCasa").hidden = false; $("casaOnline").hidden = true;
+      pollCasa();
+    };
+    if (PROVA) return show("prova");
+    casaGet().then(function (d) { casa.data = d; show("casa"); }, function () {
+      casa.mode = "online";
+      if (C.homeUrl) { $("homeLink").href = C.homeUrl + "/" + (KIOSK ? "?kiosk" : ""); $("casaOnline").hidden = false; fitSoon(); }
+    });
+  }
+
   // ---------- Avvio ----------
-  loadWeather(); loadNews(); loadMeal(); initGoogle();
+  loadWeather(); loadNews(); loadMeal(); initGoogle(); startCasa();
   setInterval(loadWeather, 15 * 60000);
   setInterval(loadNews, 10 * 60000);
   setInterval(loadMeal, 60 * 60000);
