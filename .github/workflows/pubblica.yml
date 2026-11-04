@@ -34,7 +34,7 @@ jobs:
         run: |
           mkdir -p _site/data
           cp -r app/* _site/
-          sed -i "s/casa-mia-v1/homemate-${GITHUB_SHA::7}/" _site/sw.js
+          sed -i "s/homemate-v1/homemate-${GITHUB_SHA::7}/" _site/sw.js
       - name: Notizie ANSA
         # se ANSA non risponde si pubblica lo stesso: la pagina mostra "notizie non disponibili"
         continue-on-error: true
