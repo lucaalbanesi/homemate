@@ -16,7 +16,7 @@ fi
 echo "    Node.js $(node -v) pronto"
 echo "2/3 Scarico la prova..."
 mkdir -p "$HOME/homemate-prova"
-curl -fsSL https://raw.githubusercontent.com/lucaalbanesi/homemate/main/tablet/prova.mjs -o "$HOME/homemate-prova/prova.mjs"
+curl -fsSL https://raw.githubusercontent.com/lucaalbanesi/homemate/main/tablet/prova.mjs?t=$(date +%s) -o "$HOME/homemate-prova/prova.mjs"
 echo "3/3 Avvio. Per fermare: tasto CTRL e poi C."
 termux-wake-lock 2>/dev/null || true
 cd "$HOME/homemate-prova" && node prova.mjs
