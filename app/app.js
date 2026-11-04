@@ -43,7 +43,7 @@
   function fit() {
     var root = document.documentElement;
     var land = matchMedia("(orientation: landscape) and (min-width: 900px)").matches;
-    if (!land && !(KIOSK && innerWidth >= 700)) { root.style.fontSize = ""; return; }
+    if (!land && !(KIOSK && innerWidth >= 540)) { root.style.fontSize = ""; return; }
     var lo = 10, hi = 22;
     function over() {
       if (land) return [].some.call(document.querySelectorAll(".col"), function (c) { return c.scrollHeight > c.clientHeight + 1; });
