@@ -22,6 +22,7 @@ Il repository è pubblico: in `app/config.js` non vanno mai password o chiavi se
 Punti per ogni notizia: +3 se è in primo piano su ANSA, +3 se riguarda Roma o il Lazio, +2 se ha effetti sulla vita di tutti
 i giorni (scioperi, trasporti, maltempo, bollette, tasse, mutui, scuola, sanità…), +1 se compare in più feed, −1 ogni 3 ore di età.
 Restano le 10 con più punti delle ultime 24 ore; la pagina ne mostra 2 e le altre toccando la scheda.
+Ogni notizia ha un'immagine: quella del feed ANSA, altrimenti quella dell'articolo (og:image); se manca o non si carica, un riquadro neutro.
 
 ## Da fare una volta
 

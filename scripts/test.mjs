@@ -1,6 +1,6 @@
 // Test della scelta notizie: node scripts/test.mjs
 import assert from "node:assert/strict";
-import { parseRss, rank } from "./news.mjs";
+import { parseRss, rank, imageOf, ogImage } from "./news.mjs";
 
 const now = new Date("2026-11-03T18:00:00Z");
 const h = (n) => new Date(now - n * 3.6e6).toUTCString();
@@ -19,4 +19,13 @@ assert.deepEqual(r[0].why, ["primo piano", "Roma e Lazio", "vita di tutti i gior
 assert.ok(!r.some((x) => x.title === "Notizia vecchia"), "oltre 24 ore esclusa");
 assert.equal(r.filter((x) => x.title.startsWith("Sciopero")).length, 1, "doppioni uniti");
 assert.ok(r.findIndex((x) => x.title.startsWith("Mutui")) < r.findIndex((x) => x.title.startsWith("Borsa")), "impatto pratico prima");
+assert.equal(imageOf('<item><enclosure url="https://img.ansa.it/a.jpg" type="image/jpeg"/></item>'), "https://img.ansa.it/a.jpg");
+assert.equal(imageOf('<item><media:thumbnail url="https://img.ansa.it/b.jpg?w=1&amp;h=2"/></item>'), "https://img.ansa.it/b.jpg?w=1&h=2");
+assert.equal(imageOf('<item><description><![CDATA[<img src="https://img.ansa.it/c.jpg"> testo]]></description></item>'), "https://img.ansa.it/c.jpg");
+assert.equal(imageOf('<item><description>&lt;img src=&quot;https://img.ansa.it/d.jpg&quot;&gt;</description></item>'), "https://img.ansa.it/d.jpg");
+assert.equal(imageOf('<item><enclosure url="https://x/v.mp4"/></item>'), "");
+assert.equal(ogImage('<meta property="og:image" content="https://img.ansa.it/e.jpg">'), "https://img.ansa.it/e.jpg");
+assert.equal(ogImage('<meta content="https://img.ansa.it/f.jpg" property="og:image" />'), "https://img.ansa.it/f.jpg");
+assert.equal(ogImage("<html></html>"), "");
+assert.ok("image" in r[0]);
 console.log("Test notizie: ok", r.map((x) => `${x.score} ${x.title}`));

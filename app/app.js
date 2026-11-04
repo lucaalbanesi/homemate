@@ -146,9 +146,20 @@
     if (m < 1440) return Math.round(m / 60) + " h fa";
     return Math.round(m / 1440) + " g fa";
   }
+  var PAPER = '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><rect x="8" y="10" width="32" height="28" rx="3"/><path d="M14 18h20M14 25h20M14 31h12"/></svg>';
+  function img(it) {
+    return it.image
+      ? '<img class="thumb" src="' + esc(it.image) + '" alt="" loading="lazy" referrerpolicy="no-referrer">'
+      : '<div class="thumb none">' + PAPER + "</div>";
+  }
+  // se un'immagine non si carica, al suo posto compare il riquadro neutro
+  document.addEventListener("error", function (e) {
+    var t = e.target;
+    if (t && t.tagName === "IMG" && t.classList.contains("thumb")) { var d = document.createElement("div"); d.className = "thumb none"; d.innerHTML = PAPER; t.replaceWith(d); }
+  }, true);
   function renderNews() {
     $("news").innerHTML = news.items.slice(0, 2).map(function (it) {
-      return "<div><small>" + esc(news.source) + (it.time ? " · " + ago(it.time) : "") + "</small><p>" + esc(it.title) + "</p></div>";
+      return '<div class="row">' + img(it) + "<div><small>" + esc(news.source) + (it.time ? " · " + ago(it.time) : "") + "</small><p>" + esc(it.title) + "</p></div></div>";
     }).join("");
     $("newsMore").hidden = news.items.length <= 2;
     $("newsTag").textContent = "ANSA · " + hhmm(new Date(news.updated));
@@ -157,8 +168,8 @@
   function newsHtml() {
     return '<p class="sheet-note">Scelte tra i feed ANSA: prima le notizie in primo piano, su Roma e Lazio e con effetti sulla vita di tutti i giorni; le più recenti a parità di importanza.</p>' +
       news.items.map(function (it) {
-        return '<div class="nitem"><small>' + esc(it.why && it.why.length ? it.why.join(" · ") : "ANSA") + (it.time ? " · " + ago(it.time) : "") + "</small><h4>" + esc(it.title) + "</h4>" +
-          (it.text ? "<p>" + esc(it.text) + "</p>" : "") + (it.link ? '<a href="' + esc(it.link) + '" target="_blank" rel="noopener">Leggi su ANSA ›</a>' : "") + "</div>";
+        return '<div class="nitem">' + img(it) + '<div><small>' + esc(it.why && it.why.length ? it.why.join(" · ") : "ANSA") + (it.time ? " · " + ago(it.time) : "") + "</small><h4>" + esc(it.title) + "</h4>" +
+          (it.text ? "<p>" + esc(it.text) + "</p>" : "") + (it.link ? '<a href="' + esc(it.link) + '" target="_blank" rel="noopener">Leggi su ANSA ›</a>' : "") + "</div></div>";
       }).join("");
   }
   function loadNews() {

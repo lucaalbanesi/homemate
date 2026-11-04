@@ -28,12 +28,36 @@ export function parseRss(xml) {
     const d = field(b, "pubDate");
     const t = d ? new Date(d) : null;
     return {
+      image: imageOf(b),
       title: field(b, "title"),
       text: field(b, "description").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim(),
       link: field(b, "link"),
       time: t && !isNaN(t) ? t.toISOString() : null,
     };
   }).filter((x) => x.title);
+}
+
+// Immagine della notizia dal feed: enclosure, media:content/thumbnail o prima <img> della descrizione
+export function imageOf(block) {
+  const pats = [
+    /<enclosure\b[^>]*\burl=["']([^"']+)["'][^>]*>/i,
+    /<media:(?:content|thumbnail)\b[^>]*\burl=["']([^"']+)["'][^>]*>/i,
+    /<img\b[^>]*\bsrc=["']([^"']+)["']/i,
+    /&lt;img\b[^&]*?\bsrc=(?:&quot;|["'])([^"'&]+)/i,
+  ];
+  for (const re of pats) {
+    const m = block.match(re);
+    if (m && /^https?:\/\//.test(m[1]) && !/\.(mp4|mp3|m3u8)(\?|$)/i.test(m[1])) return m[1].replace(/&amp;/g, "&");
+  }
+  return "";
+}
+
+// Immagine principale di un articolo (og:image), per le notizie senza immagine nel feed
+export function ogImage(html) {
+  const m = html.match(/<meta\b[^>]*(?:property|name)=["'](?:og:image|twitter:image)["'][^>]*>/i);
+  if (!m) return "";
+  const c = m[0].match(/\bcontent=["']([^"']+)["']/i);
+  return c && /^https?:\/\//.test(c[1]) ? c[1].replace(/&amp;/g, "&") : "";
 }
 
 function field(block, tag) {
@@ -62,6 +86,7 @@ export function rank(feedItems, now = new Date(), limit = 10) {
       cur.feeds.add(feed);
       if (!cur.text && it.text) cur.text = it.text;
       if (!cur.time && it.time) cur.time = it.time;
+      if (!cur.image && it.image) cur.image = it.image;
       byKey.set(k, cur);
     }
   }
@@ -77,7 +102,7 @@ export function rank(feedItems, now = new Date(), limit = 10) {
     if (PRATICO.test(hay)) { score += 2; why.push("vita di tutti i giorni"); }
     if (it.feeds.size > 1) score += 1;
     score -= Math.floor(Math.max(0, ageH) / 3);
-    out.push({ title: it.title, text: it.text.slice(0, 400), link: it.link, time: it.time, score, why });
+    out.push({ title: it.title, text: it.text.slice(0, 400), link: it.link, image: it.image || "", time: it.time, score, why });
   }
   out.sort((a, b) => b.score - a.score || (b.time || "").localeCompare(a.time || ""));
   return out.slice(0, limit);
@@ -97,6 +122,15 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     catch (e) { console.log(`Feed ${f.key} non disponibile: ${e.message}`); }
   }
   const items = rank(feedItems);
+  // completa le immagini mancanti leggendo l'articolo (al massimo 10 richieste)
+  for (const it of items) {
+    if (it.image || !it.link) continue;
+    try {
+      const r = await fetch(it.link, { headers: { "user-agent": "homemate/1.0" }, signal: AbortSignal.timeout(10000) });
+      if (r.ok) it.image = ogImage(await r.text());
+    } catch (e) { /* resta senza immagine */ }
+  }
+  console.log(`Immagini trovate: ${items.filter((x) => x.image).length} su ${items.length}`);
   if (!items.length) throw new Error("Nessuna notizia dai feed ANSA");
   await fs.mkdir(out.replace(/\/[^/]+$/, ""), { recursive: true });
   await fs.writeFile(out, JSON.stringify({ source: "ANSA", updated: new Date().toISOString(), items }, null, 1));

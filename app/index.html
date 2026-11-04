@@ -75,6 +75,12 @@ h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none
 .news > div:last-child { border: 0; padding-bottom: 0; }
 .news small, .nitem small { color: var(--accent); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
 .news p { margin: 0.125rem 0 0; font-weight: 500; }
+.news .row { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); gap: 0.75rem; align-items: start; }
+.thumb { width: 100%; aspect-ratio: 4 / 3; border-radius: 10px; background: var(--surface-2); object-fit: cover; display: block; }
+.thumb.none { display: grid; place-items: center; color: var(--muted); }
+.thumb.none svg { width: 45%; height: 45%; }
+.nitem { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 0.875rem; align-items: start; }
+@media (max-width: 640px) { .nitem { grid-template-columns: 5.5rem minmax(0, 1fr); } }
 .news-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap; }
 .live { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: #ff5a5a; display: inline-block; }
 .nitem { padding: 0.75rem 0; border-bottom: 1px solid var(--line); }
