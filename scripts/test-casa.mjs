@@ -38,6 +38,7 @@ const cfgFile = path.join(await fs.mkdtemp(path.join(os.tmpdir(), "casa-")), "ca
 await fs.writeFile(cfgFile, JSON.stringify({
   tapparelle: [{ id: "sog", nome: "Soggiorno", stanza: "Soggiorno", ip: ipA }, { id: "cam", nome: "Camera", stanza: "Camera", ip: ipB }, { id: "spenta", nome: "Spenta", stanza: "Bagno", ip: "127.0.0.1:1" }],
   luci: [{ id: "luce", nome: "Luce", stanza: "Soggiorno", ip: ipD, tipo: "dimmer1" }],
+  riquadri: [{ id: "r", nome: "Riquadro", righe: [{ id: "coppia", nome: "Coppia", tapparelle: ["sog", "cam"], comandi: ["apri", "50", "chiudi"] }], etichette: ["sog", "cam"] }],
   scene: [{ id: "notte", nome: "Buonanotte", tapparelle: "chiudi", luci: "spegni" }],
 }));
 const casa = await import("../tablet/server.mjs");
@@ -63,6 +64,10 @@ r = await post("/api/casa/scene/notte");
 assert.equal(dim.st.ison, false, "la scena spegne la luce");
 r = await post("/api/casa/tapparelle/cam", { azione: "salta" });
 assert.equal(r.status, 207, "azione non valida rifiutata dalla tapparella");
+r = await post("/api/casa/gruppi/coppia", { azione: "posizione", pos: 50 });
+assert.equal(r.status, 200); assert.equal(a.st.current_pos, 50); assert.equal(b.st.current_pos, 50, "il gruppo muove entrambe");
+assert.equal(r.json.riquadri[0].righe[0].tapparelle.length, 2);
+assert.equal((await post("/api/casa/gruppi/nessuno", { azione: "apri" })).status, 404);
 r = await post("/api/casa/tapparelle/nessuna", { azione: "apri" });
 assert.equal(r.status, 404);
 const page = await fetch(`http://${host}/`); assert.equal(page.status, 200); assert.match(await page.text(), /<title>Casa mia<\/title>/);

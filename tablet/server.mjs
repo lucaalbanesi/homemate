@@ -25,7 +25,9 @@ const stato = new Map(); // id -> ultimo stato letto
 
 export async function loadConfig(file = CONFIG) {
   cfg = JSON.parse(await fs.readFile(file, "utf8"));
-  cfg.tapparelle = cfg.tapparelle || []; cfg.luci = cfg.luci || []; cfg.scene = cfg.scene || [];
+  cfg.tapparelle = cfg.tapparelle || []; cfg.luci = cfg.luci || []; cfg.scene = cfg.scene || []; cfg.riquadri = cfg.riquadri || [];
+  // ogni riga di un riquadro è un gruppo di tapparelle comandate insieme
+  cfg.gruppi = [...(cfg.gruppi || []), ...cfg.riquadri.flatMap((r) => r.righe || [])];
   return cfg;
 }
 
@@ -54,6 +56,7 @@ export function snapshot() {
     aggiornato: new Date().toISOString(),
     tapparelle: cfg.tapparelle.map(pick),
     luci: cfg.luci.map(pick),
+    riquadri: cfg.riquadri,
     scene: cfg.scene.map((s) => ({ id: s.id, nome: s.nome })),
   };
 }
@@ -124,11 +127,16 @@ export function handler() {
     const { pathname } = new URL(req.url, "http://casa");
     try {
       if (pathname === "/api/casa" && req.method === "GET") return send(res, 200, snapshot());
-      const m = pathname.match(/^\/api\/casa\/(tapparelle|luci|scene)\/([a-z0-9_-]+)$/i);
+      const m = pathname.match(/^\/api\/casa\/(tapparelle|gruppi|luci|scene)\/([a-z0-9_-]+)$/i);
       if (m && req.method === "POST") {
         const body = await readBody(req);
         let errori;
         if (m[1] === "tapparelle") errori = await comandaTapparelle(m[2] === "tutte" ? "tutte" : [m[2]], body.azione, body.pos);
+        else if (m[1] === "gruppi") {
+          const g = cfg.gruppi.find((x) => x.id === m[2]);
+          if (!g) throw Object.assign(new Error("gruppo non trovato"), { status: 404 });
+          errori = await comandaTapparelle(g.tapparelle, body.azione, body.pos);
+        }
         else if (m[1] === "luci") errori = await comandaLuce(m[2], body);
         else errori = await scena(m[2]);
         await refreshSoon(); // la risposta porta già lo stato nuovo (es. "in chiusura")

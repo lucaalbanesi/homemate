@@ -398,12 +398,20 @@
       casa: true, tapparelle: [["soggiorno1", "Soggiorno 1"], ["soggiorno2", "Soggiorno 2"], ["camera1", "Camera 1"], ["camera2", "Camera 2"], ["camera3", "Camera 3"], ["cameretta1", "Cameretta 1"], ["cameretta2", "Cameretta 2"], ["bagno", "Bagno"], ["studio", "Studio"]]
         .map(function (t, i) { return { id: t[0], nome: t[1], online: i !== 7, pos: [100, 100, 60, 100, 100, 100, 50, null, 0][i], state: "stopped" }; }),
       luci: [{ id: "soggiorno", nome: "Soggiorno", online: true, on: true, brightness: 70 }],
-      scene: [{ id: "buongiorno", nome: "Buongiorno" }, { id: "buonanotte", nome: "Buonanotte" }, { id: "esco", nome: "Esco di casa" }]
+      riquadri: [
+        { id: "soggiorno", nome: "Soggiorno", righe: [{ id: "soggiorno", tapparelle: ["soggiorno1", "soggiorno2"], comandi: ["apri", "50", "chiudi"] }], etichette: ["soggiorno1", "soggiorno2"] },
+        { id: "camera", nome: "Camera", righe: [{ id: "camera-finestra", nome: "Finestra", tapparelle: ["camera1"], comandi: ["apri", "25", "50", "chiudi"] }, { id: "camera-porta", nome: "Porta e finestra", tapparelle: ["camera2", "camera3"], comandi: ["apri", "50", "chiudi"] }], etichette: ["camera1", "camera2", "camera3"] },
+        { id: "cameretta", nome: "Cameretta", righe: [{ id: "cameretta", tapparelle: ["cameretta1", "cameretta2"], comandi: ["apri", "50", "chiudi"] }], etichette: ["cameretta1", "cameretta2"] },
+        { id: "bagno", nome: "Bagno", righe: [{ id: "bagno", tapparelle: ["bagno"], comandi: ["apri", "50", "chiudi"] }] },
+        { id: "studio", nome: "Studio", righe: [{ id: "studio", tapparelle: ["studio"], comandi: ["apri", "50", "chiudi"] }] }
+      ],
+      scene: []
     },
     post: function (path, body) {
       var d = sim.data, m = path.split("/"), kind = m[2], id = m[3];
       var setT = function (t, a, p) { if (!t.online) return; t.pos = a === "apri" ? 100 : a === "chiudi" ? 0 : a === "posizione" ? p : t.pos; };
       if (kind === "tapparelle") d.tapparelle.forEach(function (t) { if (id === "tutte" || t.id === id) setT(t, body.azione, body.pos); });
+      if (kind === "gruppi") d.riquadri.forEach(function (q) { q.righe.forEach(function (r) { if (r.id === id) d.tapparelle.forEach(function (t) { if (r.tapparelle.indexOf(t.id) >= 0) setT(t, body.azione, body.pos); }); }); });
       if (kind === "luci") d.luci.forEach(function (l) { if (l.id === id) { if (body.on !== undefined) l.on = body.on; if (body.brightness !== undefined) l.brightness = body.brightness; } });
       if (kind === "scene") { var a = id === "buongiorno" ? "apri" : "chiudi"; d.tapparelle.forEach(function (t) { setT(t, a); }); if (id !== "buongiorno") d.luci.forEach(function (l) { l.on = false; }); }
       var err = (kind === "scene" || id === "tutte") ? ["Bagno: non risponde"] : [];
@@ -419,6 +427,9 @@
     return fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) })
       .then(function (r) { return r.json().catch(function () { return { ok: false, errori: ["risposta non valida"] }; }); });
   }
+  function moving(t) { return t.state === "opening" || t.state === "closing"; }
+  function bar(pos) { return '<span class="bar"><i style="width:' + (pos == null ? 0 : pos) + '%"></i></span>'; }
+  function cmdLabel(c) { return c === "apri" ? "Apri" : c === "chiudi" ? "Chiudi" : c + "%"; }
   function shutterText(t) {
     if (t.online === false) return "Non risponde";
     if (t.online == null) return "…";
@@ -429,20 +440,47 @@
     if (t.pos <= 1) return "Chiusa";
     return t.pos + "% aperta";
   }
+  function sheetNote(t) { return t.online === false ? "Non risponde" : moving(t) ? "In movimento" : ""; }
   function lightText(l) { if (l.online === false) return "Non risponde"; return l.on ? "Accesa" + (l.brightness != null ? " · " + l.brightness + "%" : "") : "Spenta"; }
   function renderCasa() {
     var d = casa.data; if (!d) return;
-    var ts = d.tapparelle || [], open = 0, closed = 0, half = 0, off = 0;
-    ts.forEach(function (t) { if (t.online === false) off++; else if (t.pos >= 99) open++; else if (t.pos <= 1) closed++; else half++; });
-    var summary = open + " aperte · " + half + " a metà · " + closed + " chiuse" + (off ? " · " + off + " non risponde" : "");
+    var ts = d.tapparelle || [], byId = {};
+    ts.forEach(function (t) { byId[t.id] = t; });
+    var boxes = (d.riquadri && d.riquadri.length) ? d.riquadri : ts.map(function (t) { return { id: t.id, nome: t.nome, righe: [{ id: "", tapparelle: [t.id], comandi: ["apri", "50", "chiudi"], singola: t.id }] }; });
+    var acts = function (r) {
+      return '<span class="acts">' + (r.comandi || ["apri", "50", "chiudi"]).map(function (c) {
+        return '<button data-row="' + esc(r.id) + '" data-single="' + esc(r.singola || "") + '" data-cmd="' + esc(c) + '">' + cmdLabel(c) + "</button>";
+      }).join("") + "</span>";
+    };
+    var note = function (ids) {
+      var list = ids.map(function (id) { return byId[id]; }).filter(Boolean);
+      if (list.some(moving)) return '<span class="note mv">In movimento</span>';
+      if (list.some(function (t) { return t.online === false; })) return '<span class="note">Non risponde</span>';
+      return "";
+    };
+    var boxHtml = function (q) {
+      var all = [];
+      q.righe.forEach(function (r) { all = all.concat(r.tapparelle); });
+      var offAll = all.every(function (id) { return byId[id] && byId[id].online === false; });
+      var head, rows = "";
+      if (q.righe.length === 1 && !q.righe[0].nome) {
+        var r0 = q.righe[0], one = r0.tapparelle.length === 1 && !q.etichette ? byId[r0.tapparelle[0]] : null;
+        head = '<div class="qrow"><span class="qname">' + (one ? '<button class="qtap" data-tap="' + esc(one.id) + '">' + esc(q.nome) + "</button>" + bar(one.pos) : esc(q.nome)) + note(all) + "</span>" + acts(r0) + "</div>";
+      } else {
+        head = '<div class="qtitle">' + esc(q.nome) + note(all) + "</div>";
+        rows = q.righe.map(function (r) { return '<div class="qrow"><span class="qsub">' + esc(r.nome || "") + "</span>" + acts(r) + "</div>"; }).join("");
+      }
+      var chips = (q.etichette || []).map(function (id, i) {
+        var t = byId[id] || {};
+        return '<button class="chip' + (t.online === false ? " off" : "") + (moving(t) ? " mv" : "") + '" data-tap="' + esc(id) + '" aria-label="' + esc(t.nome || id) + '">' + (i + 1) + '<span class="mini"><i style="width:' + (t.pos == null ? 0 : t.pos) + '%"></i></span></button>';
+      }).join("");
+      return '<div class="qbox' + (offAll ? " off" : "") + '">' + head + rows + (chips ? '<div class="chips">' + chips + "</div>" : "") + "</div>";
+    };
     $("casaBody").innerHTML =
-      '<div class="scenes">' + (d.scene || []).map(function (sc) { return '<button class="scene" data-scene="' + esc(sc.id) + '">' + esc(sc.nome) + "</button>"; }).join("") + "</div>" +
-      '<div class="block" style="margin-top:0"><div class="block-title"><strong>Tapparelle</strong><span>' + summary + "</span></div>" +
+      ((d.scene || []).length ? '<div class="scenes">' + d.scene.map(function (sc) { return '<button class="scene" data-scene="' + esc(sc.id) + '">' + esc(sc.nome) + "</button>"; }).join("") + "</div>" : "") +
+      '<div class="block" style="margin-top:0"><div class="block-title"><strong>Tapparelle</strong></div>' +
       '<div class="pair"><button data-all="apri">Apri tutte</button><button data-all="chiudi">Chiudi tutte</button></div>' +
-      '<div class="tiles">' + ts.map(function (t) {
-        var mv = t.state === "opening" || t.state === "closing";
-        return '<button class="tile' + (t.online === false ? " off" : "") + (mv ? " moving" : "") + '" data-tap="' + esc(t.id) + '"><span class="nm">' + esc(t.nome) + '</span><span class="st">' + shutterText(t) + '</span><span class="bar"><i style="width:' + (t.pos == null ? 0 : t.pos) + '%"></i></span></button>';
-      }).join("") + "</div></div>" +
+      '<div class="qboxes">' + boxes.map(boxHtml).join("") + "</div></div>" +
       ((d.luci || []).length ? '<div class="block"><div class="block-title"><strong>Luci</strong><span>' + d.luci.filter(function (l) { return l.on; }).length + " accese su " + d.luci.length + "</span></div>" +
         '<div class="tiles">' + d.luci.map(function (l) {
           return '<button class="tile' + (l.on ? " on" : "") + (l.online === false ? " off" : "") + '" data-light="' + esc(l.id) + '"><span class="nm">' + esc(l.nome) + '</span><span class="st">' + lightText(l) + "</span></button>";
@@ -458,9 +496,12 @@
   }
   function shutterSheet(id) {
     var t = (casa.data.tapparelle || []).filter(function (x) { return x.id === id; })[0]; if (!t) return;
-    openModal(t.nome, '<p class="sheet-note" id="shSt">' + shutterText(t) + '</p><div class="ctl"><button class="primary" data-a="apri">Apri</button><button data-a="ferma">Ferma</button><button class="primary" data-a="chiudi">Chiudi</button></div>' +
+    openModal(t.nome, '<div class="sheetbar" id="shBar">' + bar(t.pos) + '<span class="note" id="shSt">' + sheetNote(t) + '</span></div><div class="ctl"><button class="primary" data-a="apri">Apri</button><button data-a="ferma">Ferma</button><button class="primary" data-a="chiudi">Chiudi</button></div>' +
       '<div class="ctl"><button data-p="25">25%</button><button data-p="50">50%</button><button data-p="75">75%</button></div>');
-    casa.open = function () { var x = (casa.data.tapparelle || []).filter(function (y) { return y.id === id; })[0]; if (x && $("shSt")) $("shSt").textContent = shutterText(x); };
+    casa.open = function () {
+      var x = (casa.data.tapparelle || []).filter(function (y) { return y.id === id; })[0];
+      if (x && $("shBar")) { $("shBar").querySelector(".bar i").style.width = (x.pos == null ? 0 : x.pos) + "%"; $("shSt").textContent = sheetNote(x); }
+    };
     [].forEach.call(document.querySelectorAll("#modalBody [data-a], #modalBody [data-p]"), function (b) {
       b.addEventListener("click", function () {
         var body = b.dataset.a ? { azione: b.dataset.a } : { azione: "posizione", pos: Number(b.dataset.p) };
@@ -484,6 +525,12 @@
     var b = e.target.closest("button"); if (!b || !casa.data) return;
     if (b.dataset.scene) { b.disabled = true; casaPost("api/casa/scene/" + encodeURIComponent(b.dataset.scene)).then(function (r) { b.disabled = false; after(r, b.textContent + ": fatto"); }); }
     else if (b.dataset.all) casaPost("api/casa/tapparelle/tutte", { azione: b.dataset.all }).then(function (r) { after(r, b.dataset.all === "apri" ? "Apro tutte le tapparelle" : "Chiudo tutte le tapparelle"); });
+    else if (b.dataset.cmd) {
+      var c = b.dataset.cmd, body = c === "apri" || c === "chiudi" ? { azione: c } : { azione: "posizione", pos: Number(c) };
+      var url = b.dataset.single ? "api/casa/tapparelle/" + encodeURIComponent(b.dataset.single) : "api/casa/gruppi/" + encodeURIComponent(b.dataset.row);
+      b.disabled = true;
+      casaPost(url, body).then(function (r) { b.disabled = false; after(r); });
+    }
     else if (b.dataset.tap) shutterSheet(b.dataset.tap);
     else if (b.dataset.light) lightSheet(b.dataset.light);
   });
