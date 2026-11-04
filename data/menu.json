@@ -1,0 +1,53 @@
+{
+ "updated": "2026-11-04T10:48:50.131Z",
+ "menus": {
+  "9-4": {
+   "municipio": "VII",
+   "ciclo": "Infanzia",
+   "days": [
+    {
+     "date": "2026-11-04",
+     "spuntino": "Schiacciatine",
+     "pranzo": [
+      "Risotto al pomodoro",
+      "Sformato di platessa",
+      "Fagiolini all'olio",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Ciambellone",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-05",
+     "spuntino": "Yogurt",
+     "pranzo": [
+      "Farro e lenticchie",
+      "Mozzarella vaccina",
+      "Patate all'olio",
+      "Pane integrale",
+      "Frutta"
+     ],
+     "merenda": "Focaccia rossa soffice",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-06",
+     "spuntino": "Cracker",
+     "pranzo": [
+      "Pasta al sugo di spigola",
+      "Uova strapazzate/Frittata",
+      "Finocchi gratinati",
+      "Pane",
+      "Spremuta di arancia"
+     ],
+     "merenda": "Frutta di stagione con biscotti frollini al cacao",
+     "note": "",
+     "disponibile": true
+    }
+   ]
+  }
+ }
+}
