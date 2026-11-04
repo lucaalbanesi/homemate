@@ -1,9 +1,9 @@
 name: Menu mensa
-# Una volta al giorno, nei giorni di scuola, scarica il menu dei prossimi giorni e lo salva in data/menu.json.
+# Il sabato mattina scarica il menu della settimana dopo (lun-ven) e lo salva in data/menu.json.
 # Solo per le scuole elencate in config/mensa.json. Riparte anche quando cambia quel file.
 on:
   schedule:
-    - cron: "23 4 * * 1-5"
+    - cron: "23 4 * * 6"
   push:
     branches: [main]
     paths: ["config/mensa.json", "scripts/menu.mjs"]

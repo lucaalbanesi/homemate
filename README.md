@@ -13,7 +13,7 @@ La parte di domotica (tapparelle, Tado, luci) arriverà in una versione che funz
 | Meteo | Open-Meteo, chiesto direttamente dal browser | `app/app.js` |
 | Notizie | 6 feed ANSA, scelte da un job ogni 30 minuti e salvate in `data/news.json` | `scripts/news.mjs`, `.github/workflows/pubblica.yml` |
 | Diretta video | link a RaiNews24 | `app/config.js` |
-| Mensa | sito del Comune (MESIS), per le scuole in `config/mensa.json`, letto ogni mattina dei giorni di scuola e salvato in `data/menu.json` | `scripts/menu.mjs`, `.github/workflows/menu.yml` |
+| Mensa | sito del Comune (MESIS), per le scuole in `config/mensa.json`, letto una volta a settimana (il sabato) e salvato in `data/menu.json` | `scripts/menu.mjs`, `.github/workflows/menu.yml` |
 | Spesa | Google Tasks, lista "Spesa", con l'accesso Google di chi usa la pagina | `app/app.js` |
 
 Il repository è pubblico: in `app/config.js` non vanno mai password o chiavi segrete. L'ID client Google non è un segreto.
@@ -40,8 +40,8 @@ Ogni dispositivo, al primo avvio, chiede municipio e ciclo e li ricorda. Il job 
 
 Ciclo: 1 nido medi, 2 nido grandi, 3 ponte, 4 infanzia, 5 primaria, 6 secondaria di I grado.
 
-Il job gira ogni mattina (lun-ven) alle 5:23 ora italiana d'inverno e subito quando cambia `config/mensa.json`.
-Fa al massimo 6 richieste per scuola al sito del Comune, con una pausa tra l'una e l'altra.
+Il job gira il sabato mattina e scarica la settimana dopo, da lunedì a venerdì: 5 richieste a settimana per scuola, con una pausa
+tra l'una e l'altra. Quando cambia `config/mensa.json` riparte subito e scarica i giorni rimasti della settimana in corso.
 Elenco e menu sono pubblici come tutto il repository: si vede quale municipio e ciclo si seguono, non la scuola né chi la frequenta.
 
 ### 3. Lista della spesa (Google Tasks)

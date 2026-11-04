@@ -31,11 +31,13 @@ assert.ok("image" in r[0]);
 console.log("Test notizie: ok", r.map((x) => `${x.score} ${x.title}`));
 
 // ---- Menu mensa ----
-import { schoolDays, shapeDay, decode, fetchMenu } from "./menu.mjs";
+import { weekDays, shapeDay, decode, fetchMenu } from "./menu.mjs";
 import http from "node:http";
 {
-  const sd = schoolDays(new Date("2026-11-06T10:00:00+01:00"), 3); // venerdì
-  assert.deepEqual(sd, ["2026-11-06", "2026-11-09", "2026-11-10"], "salta il fine settimana");
+  assert.deepEqual(weekDays(new Date("2026-11-07T05:23:00+01:00")), ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13"], "sabato: settimana dopo");
+  assert.deepEqual(weekDays(new Date("2026-11-08T20:00:00+01:00")), ["2026-11-09", "2026-11-10", "2026-11-11", "2026-11-12", "2026-11-13"], "domenica: settimana dopo");
+  assert.deepEqual(weekDays(new Date("2026-11-04T11:30:00+01:00")), ["2026-11-04", "2026-11-05", "2026-11-06"], "mercoledì: fino a venerdì");
+  assert.deepEqual(weekDays(new Date("2026-11-09T08:00:00+01:00")).length, 5, "lunedì: tutta la settimana");
   const day = shapeDay("2026-11-04", [
     { tipoPasto: "Spuntino", descPasto: "Schiacciatine" },
     { tipoPasto: "Pranzo", descPasto: "Risotto al pomodoro" },

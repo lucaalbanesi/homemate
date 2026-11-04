@@ -1,6 +1,6 @@
 // Menu della mensa (Roma Capitale, MESIS). Legge il menu dei prossimi giorni di scuola e lo salva in data/menu.json.
 // Le scuole da seguire (municipio e ciclo) sono in config/mensa.json: si scaricano solo quelle.
-// Uso personale e leggero: una volta al giorno, una richiesta per giorno di scuola (al massimo 6 per scuola), con una pausa.
+// Uso personale e leggero: una volta a settimana (il sabato), una richiesta per giorno di scuola (5 per scuola), con una pausa.
 import fs from "node:fs/promises";
 
 const BASE = "https://www.comune.roma.it/servizi/mesis-portal-reports-war";
@@ -8,16 +8,17 @@ const UA = "homemate/1.0 (uso personale, una lettura al giorno)";
 
 export const CICLI = { 1: "Nido medi", 2: "Nido grandi", 3: "Ponte", 4: "Infanzia", 5: "Primaria", 6: "Secondaria di I grado" };
 
-// Prossimi giorni di scuola (lun-ven) a partire da oggi, in ora di Roma
-export function schoolDays(from = new Date(), n = 6) {
-  const out = [];
+// Giorni di scuola da scaricare: dal lunedì al venerdì della settimana in corso (da oggi in poi);
+// di sabato e domenica quelli della settimana dopo. Il menu non cambia: basta una lettura a settimana.
+export function weekDays(from = new Date()) {
   const d = new Date(from.toLocaleString("en-US", { timeZone: "Europe/Rome" }));
-  for (let i = 0; out.length < n && i < 14; i++) {
+  const wd = d.getDay(); // 0 domenica, 6 sabato
+  const start = wd === 6 ? 2 : wd === 0 ? 1 : 0;
+  const out = [];
+  for (let i = start; i < start + 7 && out.length < 5; i++) {
     const x = new Date(d.getFullYear(), d.getMonth(), d.getDate() + i);
-    const wd = x.getDay();
-    if (wd === 0 || wd === 6) continue;
-    const iso = `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
-    out.push(iso);
+    if (x.getDay() === 0 || x.getDay() === 6) { if (out.length) break; continue; }
+    out.push(`${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`);
   }
   return out;
 }
@@ -82,7 +83,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.log("::notice title=Menu mensa::Nessuna scuola in config/mensa.json: niente da scaricare.");
     process.exit(0);
   }
-  const days = schoolDays();
+  const days = weekDays();
   const menus = {};
   for (const c of combos) {
     try {
