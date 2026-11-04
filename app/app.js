@@ -512,6 +512,15 @@
   setInterval(loadMeal, 60 * 60000);
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
 
+  // ---------- Link esterni sul tablet ----------
+  // Fully Kiosk gratuito blocca le finestre nuove: sul tablet i link (RaiNews24, ANSA) si aprono nella stessa
+  // finestra, e con il tasto Indietro si torna alla pagina.
+  if (KIOSK) document.addEventListener("click", function (e) {
+    var a = e.target.closest && e.target.closest('a[target="_blank"]');
+    if (!a || !a.href || a.href.charAt(a.href.length - 1) === "#") return;
+    e.preventDefault(); location.href = a.href;
+  }, true);
+
   // ---------- Riposo (solo tablet kiosk) ----------
   if (KIOSK) {
     var lastTouch = Date.now(), sleeping = false, savedBrightness = null, idleEl = $("idle");
