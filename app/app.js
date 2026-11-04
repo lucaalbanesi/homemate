@@ -527,9 +527,10 @@
         '<p class="hint">Per capire perché, sul tablet apri <b>http://localhost:8080/api/casa/tado/diagnosi</b> e manda uno screenshot.</p>';
       return fitSoon();
     }
-    var maxOn = ss.length && ss.every(function (z) { return z.manuale && z.target === 25 && z.fino; });
+    var maxOn = ss.length && ss.every(function (z) { return z.boost || (z.manuale && z.target === 25 && z.fino); });
+    var maxEnd = (ss.filter(function (z) { return z.fino; })[0] || {}).fino;
     var allOff = ss.length && ss.every(function (z) { return !z.acceso; });
-    $("tadoBody").innerHTML = '<div class="tall"><button data-tado-all="max" class="' + (maxOn ? "hot" : "") + '">' + (maxOn ? "Max fino alle " + timeOf(ss[0].fino) : "Max per 30 min") + '</button>' +
+    $("tadoBody").innerHTML = '<div class="tall"><button data-tado-all="max" class="' + (maxOn ? "hot" : "") + '">' + (maxOn ? (maxEnd ? "Max fino alle " + timeOf(maxEnd) : "Max attivo") : "Max per 30 min") + '</button>' +
       '<button data-tado-all="programma">Ripristina programma</button><button data-tado-all="spegni">' + (allOff ? "Tutto spento" : "Spegni tutto") + "</button></div>" +
       '<div class="trooms">' + ss.map(function (z) {
         var pills = (z.finestra ? '<span class="tpill win">Finestra aperta</span>' : "") + (z.fino ? '<span class="tpill man">fino alle ' + timeOf(z.fino) + "</span>" : z.manuale ? '<span class="tpill man">Manuale</span>' : "") + (z.riscalda && z.acceso ? '<span class="tpill heat">Riscalda</span>' : "");

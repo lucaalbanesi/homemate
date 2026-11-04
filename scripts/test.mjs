@@ -81,3 +81,4 @@ import { update } from "./scuole.mjs";
 }
 await import("./test-casa.mjs");
 await import("./test-tado.mjs");
+await import("./test-tadox.mjs");

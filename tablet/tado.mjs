@@ -1,4 +1,5 @@
-// Riscaldamento Tado (valvole V3/V3+) tramite l'API cloud di Tado.
+// Riscaldamento Tado tramite l'API cloud di Tado: valvole V3/V3+ (my.tado.com) e tado X (hops.tado.com).
+// La generazione si riconosce dalla casa ("LINE_X" = tado X) e si usa l'interfaccia giusta.
 // Collegamento con il "device code flow" di Tado: il tablet mostra un link, la persona approva con il suo account.
 // Il token resta solo sul tablet, in ~/.homemate/tado.json (mai nel repository).
 import fs from "node:fs/promises";
@@ -9,8 +10,8 @@ const CLIENT_ID = "1bb50063-6b0c-4d11-bd99-387f4a91cc46"; // client pubblico del
 export const MAX_TEMP = 25, MIN_TEMP = 5;
 
 export class Tado {
-  constructor({ file = path.join(os.homedir(), ".homemate", "tado.json"), api = "https://my.tado.com/api/v2", login = "https://login.tado.com/oauth2", log = () => {}, minInterval = 5 } = {}) {
-    this.file = file; this.api = api; this.login = login; this.log = log; this.minInterval = minInterval;
+  constructor({ file = path.join(os.homedir(), ".homemate", "tado.json"), api = "https://my.tado.com/api/v2", login = "https://login.tado.com/oauth2", hops = "https://hops.tado.com", log = () => {}, minInterval = 5 } = {}) {
+    this.file = file; this.api = api; this.login = login; this.hops = hops; this.log = log; this.minInterval = minInterval;
     this.saved = null;          // { refresh_token, homeId }
     this.access = null;         // { token, exp }
     this.zones = [];            // [{ id, nome }]
@@ -56,17 +57,28 @@ export class Tado {
     }
     this.pending = null;
   }
+  // Generazione della casa: "X" per tado X, "V3" per le altre
+  async generation(homeId) {
+    const info = await this.get(`/homes/${homeId}`).catch(() => ({}));
+    return info.generation === "LINE_X" ? "X" : "V3";
+  }
+  async listZones(homeId, gen) {
+    if (gen === "X") return ((await this.x("GET", `/homes/${homeId}/rooms`)) || []).map((r) => ({ id: r.id, nome: r.name }));
+    return heatingZones(await this.get(`/homes/${homeId}/zones`));
+  }
   // Sceglie la casa dell'account che ha stanze di riscaldamento (un account può avere più case)
   async pickHome() {
     const me = await this.get("/me");
     const homes = me.homes || [];
     if (!homes.length) throw new Error("nessuna casa trovata nell'account Tado");
-    let chosen = homes[0], zones = [];
+    let chosen = homes[0], zones = [], gen = "V3";
     for (const h of homes) {
-      const z = heatingZones(await this.get(`/homes/${h.id}/zones`).catch(() => []));
-      if (z.length) { chosen = h; zones = z; break; }
+      const g = await this.generation(h.id);
+      const z = await this.listZones(h.id, g).catch(() => []);
+      if (h === homes[0]) gen = g;
+      if (z.length) { chosen = h; zones = z; gen = g; break; }
     }
-    this.saved = { ...this.saved, homeId: chosen.id };
+    this.saved = { ...this.saved, homeId: chosen.id, gen };
     this.zones = zones;
     await this.save();
     return chosen;
@@ -78,7 +90,10 @@ export class Tado {
     const homes = [];
     for (const h of me.homes || []) {
       const info = await this.get(`/homes/${h.id}`).catch((e) => ({ errore: e.message }));
-      const zones = await this.get(`/homes/${h.id}/zones`).catch((e) => ({ errore: e.message }));
+      const gen = info.generation === "LINE_X" ? "X" : "V3";
+      const zones = gen === "X"
+        ? await this.x("GET", `/homes/${h.id}/rooms`).then((rs) => (rs || []).map((r) => ({ id: r.id, name: r.name, type: "ROOM_X" }))).catch((e) => ({ errore: e.message }))
+        : await this.get(`/homes/${h.id}/zones`).catch((e) => ({ errore: e.message }));
       homes.push({
         id: h.id, nome: h.name || info.name || "", generazione: info.generation || "", scelta: this.saved && this.saved.homeId === h.id,
         stanze: Array.isArray(zones) ? zones.map((z) => ({ id: z.id, nome: z.name, tipo: z.type, dispositivi: (z.devices || []).map((d) => d.deviceType).join(", ") })) : zones,
@@ -112,8 +127,8 @@ export class Tado {
     if (!r.ok) throw Object.assign(new Error(j.error_description || j.error || `HTTP ${r.status}`), { code: j.error });
     return j;
   }
-  async call(method, p, body) {
-    const r = await fetch(this.api + p, {
+  async call(method, p, body, base = this.api) {
+    const r = await fetch(base + p, {
       method, headers: { authorization: "Bearer " + (await this.token()), ...(body ? { "content-type": "application/json" } : {}) },
       body: body ? JSON.stringify(body) : undefined, signal: AbortSignal.timeout(15000),
     });
@@ -123,18 +138,24 @@ export class Tado {
     return r.status === 204 ? null : r.json().catch(() => null);
   }
   get(p) { return this.call("GET", p); }
+  x(method, p, body) { return this.call(method, p + (p.includes("?") ? "&" : "?") + "ngsw-bypass=true", body, this.hops); }
+  isX() { return this.saved && this.saved.gen === "X"; }
   home(p) { return `/homes/${this.saved.homeId}${p}`; }
 
   // ---- Stato ----
   async refresh() {
     if (!this.saved || !this.saved.homeId) return;
     try {
+      if (!this.saved.gen) { this.saved.gen = await this.generation(this.saved.homeId); await this.save(); }
       if (!this.zones.length) {
-        this.zones = heatingZones(await this.get(this.home("/zones")));
+        this.zones = await this.listZones(this.saved.homeId, this.saved.gen);
         if (!this.zones.length) await this.pickHome(); // la casa salvata non ha stanze: provo le altre dell'account
       }
-      const s = await this.get(this.home("/zoneStates"));
-      this.state = shapeStates(this.zones, (s && s.zoneStates) || {});
+      if (this.isX()) this.state = shapeRoomsX(await this.x("GET", this.home("/rooms")));
+      else {
+        const s = await this.get(this.home("/zoneStates"));
+        this.state = shapeStates(this.zones, (s && s.zoneStates) || {});
+      }
       this.updated = Date.now(); this.error = "";
     } catch (e) {
       if (e.code === "not_linked") { this.zones = []; this.state = null; }
@@ -163,16 +184,27 @@ export class Tado {
   async stanza(zoneId, { temp, ore, programma }) {
     const z = this.zones.find((x) => String(x.id) === String(zoneId));
     if (!z) throw Object.assign(new Error("stanza non trovata"), { status: 404 });
-    if (programma) await this.backToSchedule(z.id);
-    else {
+    if (programma) {
+      if (this.isX()) await this.x("POST", this.home(`/rooms/${z.id}/resumeSchedule`));
+      else await this.backToSchedule(z.id);
+    } else {
       const t = clampTemp(temp), h = Number(ore);
       if (!(h >= 1 && h <= 3)) throw Object.assign(new Error("durata non valida"), { status: 400 });
-      await this.overlay(z.id, t, h * 3600);
+      if (this.isX()) await this.x("POST", this.home(`/rooms/${z.id}/manualControl`), { setting: { power: "ON", temperature: { value: t } }, termination: { type: "TIMER", durationInSeconds: h * 3600 } });
+      else await this.overlay(z.id, t, h * 3600);
     }
     await this.refresh();
   }
   async tutte(azione) {
     if (!this.zones.length) throw Object.assign(new Error("Tado non collegato"), { status: 409 });
+    if (this.isX()) {
+      // tado X: azioni rapide ufficiali, una richiesta per tutta la casa (come nell'app Tado)
+      const q = { max: "boost", spegni: "allOff", programma: "resumeSchedule" }[azione];
+      if (!q) throw Object.assign(new Error("azione non valida"), { status: 400 });
+      await this.x("POST", this.home(`/quickActions/${q}`));
+      await this.refresh();
+      return [];
+    }
     const errori = [];
     for (const z of this.zones) {
       try {
@@ -218,6 +250,28 @@ export function shapeStates(zones, zs) {
       riscalda: heat ? heat.percentage > 0 : false,
       finestra: Boolean(s.openWindow || s.openWindowDetected),
       online: s.link ? s.link.state !== "OFFLINE" : true,
+    };
+  });
+}
+// Stanze tado X (hops.tado.com) in forma semplice per la pagina
+export function shapeRoomsX(rooms, now = Date.now()) {
+  return (Array.isArray(rooms) ? rooms : []).map((r) => {
+    const set = r.setting || {}, sensor = r.sensorDataPoints || {}, term = r.manualControlTermination;
+    const fino = term && (term.projectedExpiry || (term.remainingTimeInSeconds ? new Date(now + term.remainingTimeInSeconds * 1000).toISOString() : null));
+    const boost = Boolean(r.boostMode);
+    return {
+      id: r.id,
+      nome: r.name,
+      temp: sensor.insideTemperature ? round1(sensor.insideTemperature.value) : null,
+      umidita: sensor.humidity ? Math.round(sensor.humidity.percentage) : null,
+      acceso: set.power !== "OFF",
+      target: set.power === "OFF" ? null : set.temperature ? round1(set.temperature.value) : null,
+      manuale: Boolean(term) || boost,
+      fino: fino || (boost && r.boostMode.projectedExpiry) || null,
+      boost,
+      riscalda: r.heatingPower ? r.heatingPower.percentage > 0 : false,
+      finestra: Boolean(r.openWindow),
+      online: r.connection ? r.connection.state !== "DISCONNECTED" : true,
     };
   });
 }

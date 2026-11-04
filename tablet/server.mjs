@@ -22,7 +22,7 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 
 const log = (...a) => console.log(new Date().toLocaleString("it-IT", { timeZone: "Europe/Rome" }), ...a);
 let cfg = { tapparelle: [], luci: [], scene: [] };
-let tado = new Tado({ log, file: process.env.TADO_FILE || undefined, api: process.env.TADO_API || undefined, login: process.env.TADO_LOGIN || undefined });
+let tado = new Tado({ log, file: process.env.TADO_FILE || undefined, api: process.env.TADO_API || undefined, login: process.env.TADO_LOGIN || undefined, hops: process.env.TADO_HOPS || undefined });
 export function useTado(t) { tado = t; }
 const stato = new Map(); // id -> ultimo stato letto
 
