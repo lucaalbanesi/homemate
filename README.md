@@ -65,6 +65,10 @@ legge e comanda le Shelly elencate in `config/casa.json` (tapparelle Plus 2PM co
 e prende notizie e menu dal sito online. In `riquadri` si decide come la pagina raggruppa le tapparelle: ogni riga comanda
 insieme le sue tapparelle con i pulsanti indicati (es. Apri · 50% · Chiudi), le etichette 1, 2, 3 muovono una tapparella alla volta.
 
+- **Riscaldamento Tado** (valvole V3/V3+, API cloud di Tado): sul tablet, nella scheda Riscaldamento, "Collega Tado" mostra un link
+  da aprire (anche dal telefono) per approvare con il proprio account. Il collegamento resta solo sul tablet in `~/.homemate/tado.json`.
+  Stato aggiornato ogni minuto (con AI Assist Tado concede 20.000 richieste al giorno). Comandi: Max per 30 min (25 °C),
+  Ripristina programma, Spegni tutto (fino a Ripristina), e per ogni stanza una temperatura fino a ora+1, +2 o +3 ore.
 - **Installazione o aggiornamento** (in Termux, una riga):
   `curl -fsSL "https://raw.githubusercontent.com/lucaalbanesi/homemate/main/tablet/installa.sh?t=$(date +%s)" | bash`
 - **Avvio automatico**: installa Termux:Boot da F-Droid e aprilo una volta. Termux, Termux:Boot e Fully Kiosk con batteria "Senza restrizioni".

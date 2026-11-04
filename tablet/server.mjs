@@ -10,6 +10,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import * as shelly from "./shelly.mjs";
+import { Tado } from "./tado.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP = path.join(ROOT, "app");
@@ -21,6 +22,8 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 
 const log = (...a) => console.log(new Date().toLocaleString("it-IT", { timeZone: "Europe/Rome" }), ...a);
 let cfg = { tapparelle: [], luci: [], scene: [] };
+let tado = new Tado({ log, file: process.env.TADO_FILE || undefined, api: process.env.TADO_API || undefined, login: process.env.TADO_LOGIN || undefined });
+export function useTado(t) { tado = t; }
 const stato = new Map(); // id -> ultimo stato letto
 
 export async function loadConfig(file = CONFIG) {
@@ -58,6 +61,7 @@ export function snapshot() {
     luci: cfg.luci.map(pick),
     riquadri: cfg.riquadri,
     scene: cfg.scene.map((s) => ({ id: s.id, nome: s.nome })),
+    tado: tado.snapshot(),
   };
 }
 
@@ -127,6 +131,16 @@ export function handler() {
     const { pathname } = new URL(req.url, "http://casa");
     try {
       if (pathname === "/api/casa" && req.method === "GET") return send(res, 200, snapshot());
+      const t = pathname.match(/^\/api\/casa\/tado\/(collega|tutte|stanze\/[0-9]+)$/);
+      if (t && req.method === "POST") {
+        const body = await readBody(req);
+        let errori = [];
+        if (t[1] === "collega") await tado.startLink();
+        else if (t[1] === "tutte") errori = await tado.tutte(body.azione);
+        else await tado.stanza(t[1].split("/")[1], body);
+        log(`Tado ${t[1]} ${JSON.stringify(body)}${errori.length ? " con errori: " + errori.join("; ") : ""}`);
+        return send(res, errori.length ? 207 : 200, { ok: !errori.length, errori, ...snapshot() });
+      }
       const m = pathname.match(/^\/api\/casa\/(tapparelle|gruppi|luci|scene)\/([a-z0-9_-]+)$/i);
       if (m && req.method === "POST") {
         const body = await readBody(req);
@@ -180,6 +194,8 @@ let startedAt = "";
 
 if (import.meta.url === `file://${process.argv[1]}`) {
   await loadConfig();
+  await tado.load(); await tado.refresh();
+  setInterval(() => tado.refresh(), 60000);
   execFile("git", ["-C", ROOT, "log", "-1", "--format=%h %s"], (_, out) => { startedAt = (out || "").trim(); log("Versione", startedAt || "sconosciuta"); });
   await refresh();
   setInterval(refreshSoon, 5000);

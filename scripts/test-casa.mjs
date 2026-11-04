@@ -75,5 +75,12 @@ assert.equal((await fetch(`http://${host}/../config/casa.json`)).status, 404, "n
 const st = await fetch(`http://${host}/api/casa`).then((x) => x.json());
 assert.equal(st.casa, true); assert.equal(st.scene[0].nome, "Buonanotte");
 
+// comandi Tado passano dal servizio al modulo Tado
+const calls = [];
+casa.useTado({ snapshot: () => ({ collegato: true, stanze: [] }), startLink: async () => calls.push("collega"), tutte: async (az) => { calls.push("tutte:" + az); return []; }, stanza: async (id, b) => calls.push("stanza:" + id + ":" + JSON.stringify(b)) });
+assert.equal((await post("/api/casa/tado/tutte", { azione: "max" })).status, 200);
+await post("/api/casa/tado/stanze/2", { temp: 21, ore: 1 }); await post("/api/casa/tado/collega");
+assert.deepEqual(calls, ["tutte:max", 'stanza:2:{"temp":21,"ore":1}', "collega"]);
+assert.equal((await fetch(`http://${host}/api/casa`).then((x) => x.json())).tado.collegato, true);
 for (const s of [srv, a.srv, b.srv, dim.srv]) s.close();
 console.log("Test casa: ok");

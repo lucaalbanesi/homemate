@@ -405,13 +405,30 @@
         { id: "bagno", nome: "Bagno", righe: [{ id: "bagno", tapparelle: ["bagno"], comandi: ["apri", "50", "chiudi"] }] },
         { id: "studio", nome: "Studio", righe: [{ id: "studio", tapparelle: ["studio"], comandi: ["apri", "50", "chiudi"] }] }
       ],
-      scene: []
+      scene: [],
+      tado: { collegato: true, collegamento: null, aggiornato: new Date().toISOString(), errore: "", stanze: [
+        { id: 1, nome: "Soggiorno", temp: 19.8, umidita: 52, acceso: true, target: 21, manuale: false, fino: null, riscalda: true, finestra: false, online: true },
+        { id: 2, nome: "Camera", temp: 20.4, umidita: 48, acceso: true, target: 20, manuale: false, fino: null, riscalda: false, finestra: false, online: true },
+        { id: 3, nome: "Cameretta", temp: 20.6, umidita: 50, acceso: true, target: 20.5, manuale: false, fino: null, riscalda: false, finestra: true, online: true }] }
     },
     post: function (path, body) {
       var d = sim.data, m = path.split("/"), kind = m[2], id = m[3];
       var setT = function (t, a, p) { if (!t.online) return; t.pos = a === "apri" ? 100 : a === "chiudi" ? 0 : a === "posizione" ? p : t.pos; };
       if (kind === "tapparelle") d.tapparelle.forEach(function (t) { if (id === "tutte" || t.id === id) setT(t, body.azione, body.pos); });
       if (kind === "gruppi") d.riquadri.forEach(function (q) { q.righe.forEach(function (r) { if (r.id === id) d.tapparelle.forEach(function (t) { if (r.tapparelle.indexOf(t.id) >= 0) setT(t, body.azione, body.pos); }); }); });
+      if (kind === "tado") {
+        var ss = d.tado.stanze, later = function (h) { return new Date(Date.now() + h * 3600000).toISOString(); };
+        if (id === "tutte") ss.forEach(function (z) {
+          if (body.azione === "max") { z.acceso = true; z.target = 25; z.manuale = true; z.fino = later(0.5); z.riscalda = true; }
+          if (body.azione === "spegni") { z.acceso = false; z.target = null; z.manuale = true; z.fino = null; z.riscalda = false; }
+          if (body.azione === "programma") { z.acceso = true; z.target = 20.5; z.manuale = false; z.fino = null; }
+        });
+        else ss.forEach(function (z) {
+          if (String(z.id) !== m[4]) return;
+          if (body.programma) { z.manuale = false; z.fino = null; z.target = 20.5; z.acceso = true; }
+          else { z.acceso = true; z.target = body.temp; z.manuale = true; z.fino = later(body.ore); z.riscalda = body.temp > z.temp; }
+        });
+      }
       if (kind === "luci") d.luci.forEach(function (l) { if (l.id === id) { if (body.on !== undefined) l.on = body.on; if (body.brightness !== undefined) l.brightness = body.brightness; } });
       if (kind === "scene") { var a = id === "buongiorno" ? "apri" : "chiudi"; d.tapparelle.forEach(function (t) { setT(t, a); }); if (id !== "buongiorno") d.luci.forEach(function (l) { l.on = false; }); }
       var err = (kind === "scene" || id === "tutte") ? ["Bagno: non risponde"] : [];
@@ -485,9 +502,68 @@
         '<div class="tiles">' + d.luci.map(function (l) {
           return '<button class="tile' + (l.on ? " on" : "") + (l.online === false ? " off" : "") + '" data-light="' + esc(l.id) + '"><span class="nm">' + esc(l.nome) + '</span><span class="st">' + lightText(l) + "</span></button>";
         }).join("") + "</div></div>" : "");
+    renderTado();
     if (casa.open) casa.open();
     fitSoon();
   }
+
+  // ---------- Riscaldamento (Tado) ----------
+  function deg(x) { return x == null ? "–" : String(x).replace(".", ",") + "°"; }
+  function timeOf(iso) { return iso ? hhmm(new Date(iso)) : ""; }
+  function zoneById(id) { return ((casa.data.tado || {}).stanze || []).filter(function (z) { return String(z.id) === String(id); })[0]; }
+  function renderTado() {
+    var t = casa.data && casa.data.tado; if (!t) return;
+    $("tadoCard").hidden = false;
+    $("tadoTag").textContent = t.aggiornato ? "aggiornato " + timeOf(t.aggiornato) : "";
+    if (!t.collegato) {
+      $("tadoBody").innerHTML = t.collegamento
+        ? '<p class="state">Apri questo link, anche dal telefono, e approva con il tuo account Tado:</p><p><a href="' + esc(t.collegamento.link) + '" target="_blank" rel="noopener">' + esc(t.collegamento.link) + '</a></p><p class="state">Codice: <b>' + esc(t.collegamento.codice) + "</b>. La scheda si aggiorna da sola.</p>"
+        : '<p class="state">Collega il tuo account Tado per vedere e comandare le valvole. Si fa una volta sola.</p><button class="btn primary" data-tado-link="1">Collega Tado</button>' + (t.errore ? '<p class="state err">' + esc(t.errore) + "</p>" : "");
+      return fitSoon();
+    }
+    var ss = t.stanze || [];
+    var maxOn = ss.length && ss.every(function (z) { return z.manuale && z.target === 25 && z.fino; });
+    var allOff = ss.length && ss.every(function (z) { return !z.acceso; });
+    $("tadoBody").innerHTML = '<div class="tall"><button data-tado-all="max" class="' + (maxOn ? "hot" : "") + '">' + (maxOn ? "Max fino alle " + timeOf(ss[0].fino) : "Max per 30 min") + '</button>' +
+      '<button data-tado-all="programma">Ripristina programma</button><button data-tado-all="spegni">' + (allOff ? "Tutto spento" : "Spegni tutto") + "</button></div>" +
+      '<div class="trooms">' + ss.map(function (z) {
+        var pills = (z.finestra ? '<span class="tpill win">Finestra aperta</span>' : "") + (z.fino ? '<span class="tpill man">fino alle ' + timeOf(z.fino) + "</span>" : z.manuale ? '<span class="tpill man">Manuale</span>' : "") + (z.riscalda && z.acceso ? '<span class="tpill heat">Riscalda</span>' : "");
+        var target = !z.acceso ? "spento" : "→ " + deg(z.target) + (z.manuale ? "" : " programma");
+        return '<button class="troom' + (z.acceso ? "" : " off") + '" data-zone="' + esc(z.id) + '"><span><span class="tn">' + esc(z.nome) + "</span>" + pills +
+          '<span class="ts" style="display:block">' + (z.online === false ? "Non risponde" : z.umidita != null ? "Umidità " + z.umidita + "%" : "") + '</span></span><span><span class="tt" style="display:block">' + deg(z.temp) + '</span><span class="tg" style="display:block">' + target + "</span></span></button>";
+      }).join("") + "</div>" + (t.errore ? '<p class="state err">' + esc(t.errore) + "</p>" : "");
+    fitSoon();
+  }
+  function zoneSheet(id) {
+    var z = zoneById(id); if (!z) return;
+    var v = z.target != null ? z.target : Math.round((z.temp || 20) * 2) / 2;
+    var later = function (h) { return hhmm(new Date(Date.now() + h * 3600000)); };
+    openModal(z.nome, '<p class="sheet-note">Ora ' + deg(z.temp) + (z.umidita != null ? " · umidità " + z.umidita + "%" : "") + "</p>" +
+      '<div class="tstep"><button data-step="-0.5" aria-label="Meno mezzo grado">−</button><output id="tVal">' + deg(v) + '</output><button data-step="0.5" aria-label="Più mezzo grado">+</button></div>' +
+      '<p class="sheet-note">Imposta fino alle</p><div class="ctl"><button class="primary" data-ore="1">' + later(1) + '</button><button class="primary" data-ore="2">' + later(2) + '</button><button class="primary" data-ore="3">' + later(3) + "</button></div>" +
+      '<button class="wide" data-prog="1">Torna al programma</button>');
+    casa.open = null;
+    [].forEach.call(document.querySelectorAll("#modalBody [data-step]"), function (b) {
+      b.addEventListener("click", function () { v = Math.max(5, Math.min(25, v + Number(b.dataset.step))); $("tVal").textContent = deg(v); });
+    });
+    [].forEach.call(document.querySelectorAll("#modalBody [data-ore]"), function (b) {
+      b.addEventListener("click", function () {
+        casaPost("api/casa/tado/stanze/" + encodeURIComponent(id), { temp: v, ore: Number(b.dataset.ore) }).then(function (r) { closeModal(); after(r, z.nome + ": " + deg(v) + " fino alle " + b.textContent); });
+      });
+    });
+    $("modalBody").querySelector("[data-prog]").addEventListener("click", function () {
+      casaPost("api/casa/tado/stanze/" + encodeURIComponent(id), { programma: true }).then(function (r) { closeModal(); after(r, z.nome + ": torna al programma"); });
+    });
+  }
+  $("tadoBody").addEventListener("click", function (e) {
+    var b = e.target.closest("button"); if (!b || !casa.data) return;
+    if (b.dataset.tadoLink) { b.disabled = true; casaPost("api/casa/tado/collega").then(function (r) { after(r); }); }
+    else if (b.dataset.tadoAll) {
+      var a = b.dataset.tadoAll, msg = a === "max" ? "Riscaldamento al massimo per 30 minuti" : a === "spegni" ? "Riscaldamento spento" : "Tutte le stanze tornano al programma";
+      b.disabled = true; casaPost("api/casa/tado/tutte", { azione: a }).then(function (r) { b.disabled = false; after(r, msg); });
+    }
+    else if (b.dataset.zone) zoneSheet(b.dataset.zone);
+  });
   function after(res, ok) {
     if (res && res.tapparelle) { casa.data = res; renderCasa(); }
     if (res && res.errori && res.errori.length) toast("Fatto, tranne: " + res.errori.join(", "));

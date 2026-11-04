@@ -80,3 +80,4 @@ import { update } from "./scuole.mjs";
   console.log("Test scuole: ok");
 }
 await import("./test-casa.mjs");
+await import("./test-tado.mjs");
