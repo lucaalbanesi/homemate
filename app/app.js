@@ -186,6 +186,48 @@
   onTap($("news"), openNews);
   $("newsMore").addEventListener("click", openNews);
 
+  // ---------- Mensa (file preparato dal job ogni mattina) ----------
+  var menu = null;
+  function todayIso() { return romeNow().slice(0, 10); }
+  function dayLabel(iso) {
+    if (iso === todayIso()) return "oggi";
+    var t = new Date(todayIso() + "T12:00:00"); t.setDate(t.getDate() + 1);
+    if (iso === t.toISOString().slice(0, 10)) return "domani";
+    return new Date(iso + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric" });
+  }
+  function mealHtml(d) {
+    if (!d.disponibile) return '<p class="state">Nessun menu per questo giorno' + (d.note ? ": " + esc(d.note) : ".") + "</p>";
+    return '<div class="meal">' + (d.pranzo.length ? '<div class="main">' + d.pranzo.map(esc).join("<br>") + "</div>" : "") +
+      '<div class="side">' + (d.spuntino ? "<span>Spuntino <b>" + esc(d.spuntino) + "</b></span>" : "") + (d.merenda ? "<span>Merenda <b>" + esc(d.merenda) + "</b></span>" : "") + "</div>" +
+      (d.note ? '<div class="note">' + esc(d.note) + "</div>" : "") + "</div>";
+  }
+  function renderMeal() {
+    var t = todayIso(), days = menu.days || [];
+    var d = days.filter(function (x) { return x.date === t; })[0] || days.filter(function (x) { return x.date > t; })[0];
+    if (!d) { $("mealTitle").textContent = "Mensa"; $("mealBody").innerHTML = '<p class="state">Menu non ancora aggiornato.</p>'; return; }
+    $("mealTitle").textContent = "Mensa, " + dayLabel(d.date);
+    $("mealTag").textContent = menu.ciclo || "";
+    $("mealBody").innerHTML = mealHtml(d);
+    fitSoon();
+  }
+  function loadMeal() {
+    fetch("data/menu.json", { cache: "no-store" }).then(function (r) {
+      if (r.status === 404) throw { missing: true };
+      if (!r.ok) throw 0; return r.json();
+    }).then(function (m) { menu = m; renderMeal(); }).catch(function (e) {
+      if (menu) return;
+      $("mealBody").innerHTML = e && e.missing ? '<p class="state">Menu della mensa non ancora impostato.</p>' : '<p class="state err">Menu non disponibile. Riprovo più tardi.</p>';
+    });
+  }
+  onTap($("mealCard"), function () {
+    if (!menu || !menu.days || !menu.days.length) return;
+    var t = todayIso();
+    openModal("Mensa, prossimi giorni", menu.days.filter(function (d) { return d.date >= t; }).map(function (d) {
+      return '<div class="mday"><h4>' + esc(dayLabel(d.date)) + "</h4>" + mealHtml(d) + "</div>";
+    }).join("") || '<p class="state">Nessun giorno disponibile.</p>');
+  });
+  setInterval(function () { if (menu) renderMeal(); }, 10 * 60000);
+
   // ---------- Spesa (Google Tasks, con l'accesso Google di chi usa la pagina) ----------
   var SCOPE = "https://www.googleapis.com/auth/tasks", API = "https://tasks.googleapis.com/tasks/v1";
   var tokenClient = null, listId = store("casa.spesa.lista"), items = [];
@@ -282,9 +324,10 @@
   setInterval(function () { if (token() && !document.activeElement.matches("#addItem")) loadShop(); }, 2 * 60000);
 
   // ---------- Avvio ----------
-  loadWeather(); loadNews(); initGoogle();
+  loadWeather(); loadNews(); loadMeal(); initGoogle();
   setInterval(loadWeather, 15 * 60000);
   setInterval(loadNews, 10 * 60000);
+  setInterval(loadMeal, 60 * 60000);
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
 
   // ---------- Riposo (solo tablet kiosk) ----------

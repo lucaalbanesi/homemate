@@ -13,6 +13,7 @@ La parte di domotica (tapparelle, Tado, luci) arriverà in una versione che funz
 | Meteo | Open-Meteo, chiesto direttamente dal browser | `app/app.js` |
 | Notizie | 6 feed ANSA, scelte da un job ogni 30 minuti e salvate in `data/news.json` | `scripts/news.mjs`, `.github/workflows/pubblica.yml` |
 | Diretta video | link a RaiNews24 | `app/config.js` |
+| Mensa | sito del Comune (MESIS), letto da un job ogni mattina dei giorni di scuola e salvato in `data/menu.json` | `scripts/menu.mjs`, `.github/workflows/menu.yml` |
 | Spesa | Google Tasks, lista "Spesa", con l'accesso Google di chi usa la pagina | `app/app.js` |
 
 Il repository è pubblico: in `app/config.js` non vanno mai password o chiavi segrete. L'ID client Google non è un segreto.
@@ -29,7 +30,22 @@ Ogni notizia ha un'immagine: quella del feed ANSA, altrimenti quella dell'artico
 ### 1. Pubblicazione
 Settings → Pages → Source: **GitHub Actions**. Dopo il primo push il sito è online in un paio di minuti.
 
-### 2. Lista della spesa (Google Tasks)
+### 2. Menu della mensa
+Settings → Secrets and variables → Actions → **New repository secret**, due volte:
+
+- `MENSA_MUNICIPIO`: il codice del municipio della scuola
+
+  | Municipio | I | II | III | IV | V | VI | VII | VIII | IX | X | XI | XII | XIII | XIV | XV |
+  |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+  | Codice | 1 | 2 | 4 | 5 | 6 | 8 | 9 | 11 | 12 | 13 | 15 | 16 | 18 | 19 | 20 |
+
+- `MENSA_CICLO`: 1 nido medi, 2 nido grandi, 3 ponte, 4 infanzia, 5 primaria, 6 secondaria di I grado
+
+Poi Actions → **Menu mensa** → Run workflow. Da lì in poi gira da solo ogni mattina (lun-ven) alle 5:23 ora italiana d'inverno.
+I due valori restano privati: nel file pubblico del menu c'è solo il ciclo (es. "Primaria") e i piatti, mai il municipio.
+Il job fa al massimo 6 richieste al giorno al sito del Comune, una per giorno di scuola, con una pausa tra l'una e l'altra.
+
+### 3. Lista della spesa (Google Tasks)
 1. Vai su https://console.cloud.google.com, crea un progetto "Casa mia".
 2. API e servizi → Libreria → abilita **Google Tasks API**.
 3. Schermata di consenso OAuth → Esterno → nome "Casa mia" → in "Utenti di prova" aggiungi la tua email e quella di Alessandra.

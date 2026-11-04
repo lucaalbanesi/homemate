@@ -29,3 +29,39 @@ assert.equal(ogImage('<meta content="https://img.ansa.it/f.jpg" property="og:ima
 assert.equal(ogImage("<html></html>"), "");
 assert.ok("image" in r[0]);
 console.log("Test notizie: ok", r.map((x) => `${x.score} ${x.title}`));
+
+// ---- Menu mensa ----
+import { schoolDays, shapeDay, decode, fetchMenu } from "./menu.mjs";
+import http from "node:http";
+{
+  const sd = schoolDays(new Date("2026-11-06T10:00:00+01:00"), 3); // venerdì
+  assert.deepEqual(sd, ["2026-11-06", "2026-11-09", "2026-11-10"], "salta il fine settimana");
+  const day = shapeDay("2026-11-04", [
+    { tipoPasto: "Spuntino", descPasto: "Schiacciatine" },
+    { tipoPasto: "Pranzo", descPasto: "Risotto al pomodoro" },
+    { tipoPasto: "Pranzo", descPasto: "Sformato di platessa<br>Fagiolini all'olio" },
+    { tipoPasto: "Merenda", descPasto: "Ciambellone" },
+    { tipoPasto: "Note", descPasto: "" },
+  ]);
+  assert.deepEqual(day.pranzo, ["Risotto al pomodoro", "Sformato di platessa", "Fagiolini all'olio"]);
+  assert.equal(day.spuntino, "Schiacciatine"); assert.equal(day.merenda, "Ciambellone"); assert.equal(day.disponibile, true);
+  assert.equal(shapeDay("x", []).disponibile, false, "giorno senza menu");
+  assert.equal(decode(new Uint8Array([0x63, 0x61, 0x66, 0xe8])), "cafè", "codifica windows-1252");
+  assert.equal(decode(new TextEncoder().encode("però")), "però");
+
+  // server finto del Comune
+  const seen = [];
+  const srv = http.createServer((req, res) => {
+    const u = new URL(req.url, "http://x");
+    if (u.pathname.endsWith("loadMenuRistorazione.do")) { res.setHeader("set-cookie", "JSESSIONID=abc; Path=/"); return res.end("ok"); }
+    seen.push({ q: Object.fromEntries(u.searchParams), cookie: req.headers.cookie });
+    res.setHeader("content-type", "application/json");
+    res.end(Buffer.from(JSON.stringify([{ tipoPasto: "Pranzo", descPasto: "Pasta e fagioli" }]), "latin1"));
+  });
+  await new Promise((r) => srv.listen(0, r));
+  const got = await fetchMenu({ municipio: 9, ciclo: 5, days: ["2026-11-04"], base: `http://127.0.0.1:${srv.address().port}`, pause: 0 });
+  srv.close();
+  assert.equal(got[0].pranzo[0], "Pasta e fagioli");
+  assert.equal(seen[0].q.giornoSelezionato, "04/11/2026"); assert.equal(seen[0].q.municipio, "9"); assert.equal(seen[0].cookie, "JSESSIONID=abc");
+  console.log("Test menu: ok");
+}

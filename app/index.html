@@ -89,6 +89,17 @@ h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none
 .nitem p { margin: 0.25rem 0; color: var(--muted); font-size: .95rem; }
 .nitem a { font-size: .9rem; font-weight: 600; }
 
+/* Mensa */
+.meal { display: grid; gap: 0.5rem; }
+.meal .main { font-weight: 600; font-size: 1.1rem; line-height: 1.4; }
+.meal .side { display: flex; gap: 1.25rem; flex-wrap: wrap; color: var(--muted); font-size: .95rem; }
+.meal .side b { color: var(--text); font-weight: 600; }
+.meal .note { color: var(--warn); font-size: .9rem; }
+.mday { padding: 0.75rem 0; border-bottom: 1px solid var(--line); }
+.mday:last-child { border: 0; }
+.mday h4 { margin: 0 0 0.25rem; font-size: 1rem; }
+.mday h4::first-letter { text-transform: uppercase; }
+
 /* Spesa */
 .shop { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.375rem; }
 .shop button { width: 100%; display: flex; align-items: center; gap: 0.75rem; text-align: left; background: var(--surface-2); border-radius: 12px; padding: 0.625rem 0.75rem; min-height: 2.75rem; }
@@ -153,6 +164,11 @@ h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none
     <section class="card tap" id="wxCard" role="button" tabindex="0" aria-label="Meteo, tocca per i prossimi 7 giorni">
       <h2><span id="wxTitle">Meteo</span> <small id="wxTag"></small></h2>
       <div id="wxBody"><div class="state">Caricamento meteo…</div></div>
+    </section>
+
+    <section class="card tap" id="mealCard" role="button" tabindex="0" aria-label="Mensa, tocca per i prossimi giorni">
+      <h2><span id="mealTitle">Mensa</span> <small id="mealTag"></small></h2>
+      <div id="mealBody"><div class="state">Caricamento menu…</div></div>
     </section>
   </div>
 

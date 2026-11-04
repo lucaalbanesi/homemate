@@ -6,6 +6,10 @@ on:
     branches: [main]
   schedule:
     - cron: "7,37 * * * *"
+  workflow_run:
+    # i commit fatti dal job del menu non fanno partire il push: si pubblica quando finisce
+    workflows: ["Menu mensa"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -25,6 +29,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -34,6 +40,7 @@ jobs:
         run: |
           mkdir -p _site/data
           cp -r app/* _site/
+          [ -d data ] && cp -r data/* _site/data/ || true
           sed -i "s/homemate-v1/homemate-${GITHUB_SHA::7}/" _site/sw.js
       - name: Notizie ANSA
         # se ANSA non risponde si pubblica lo stesso: la pagina mostra "notizie non disponibili"
