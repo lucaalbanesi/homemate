@@ -6,7 +6,7 @@ on:
     - cron: "23 4 * * 6"
   push:
     branches: [main]
-    paths: ["config/mensa.json", "scripts/menu.mjs"]
+    paths: ["config/mensa.json", "scripts/menu.mjs", ".github/workflows/menu.yml"]
   workflow_dispatch:
     inputs:
       municipio:
@@ -55,4 +55,11 @@ jobs:
           [ -f data/menu.json ] && git add data/menu.json
           if git diff --cached --quiet; then echo "Niente da salvare"; exit 0; fi
           git -c user.name="homemate-bot" -c user.email="actions@users.noreply.github.com" commit -m "Menu mensa aggiornato"
-          git push
+          # GitHub a volte risponde con un errore momentaneo: riprovo fino a 4 volte
+          for i in 1 2 3 4; do
+            git push && exit 0
+            echo "Salvataggio non riuscito, riprovo tra $((i * 10)) secondi"
+            sleep $((i * 10))
+            git pull --rebase -q origin main
+          done
+          exit 1
