@@ -1,6 +1,6 @@
 // Menu della mensa (Roma Capitale, MESIS). Legge il menu dei prossimi giorni di scuola e lo salva in data/menu.json.
-// Municipio e ciclo arrivano dalle impostazioni private del repository (Secrets), non stanno mai nel codice.
-// Uso personale e leggero: una volta al giorno, una richiesta per giorno di scuola (al massimo 6), con una pausa tra l'una e l'altra.
+// Le scuole da seguire (municipio e ciclo) sono in config/mensa.json: si scaricano solo quelle.
+// Uso personale e leggero: una volta al giorno, una richiesta per giorno di scuola (al massimo 6 per scuola), con una pausa.
 import fs from "node:fs/promises";
 
 const BASE = "https://www.comune.roma.it/servizi/mesis-portal-reports-war";
@@ -70,16 +70,29 @@ export async function fetchMenu({ municipio, ciclo, days, base = BASE, pause = 1
   return out;
 }
 
+// Codici MESIS dei municipi (valore della tendina sul sito del Comune) e nome
+export const MUNICIPI = { 1: "I", 2: "II", 4: "III", 5: "IV", 6: "V", 8: "VI", 9: "VII", 11: "VIII", 12: "IX", 13: "X", 15: "XI", 16: "XII", 18: "XIII", 19: "XIV", 20: "XV" };
+export const comboKey = (municipio, ciclo) => `${municipio}-${ciclo}`;
+
 if (import.meta.url === `file://${process.argv[1]}`) {
   const outFile = process.argv[2] || "data/menu.json";
-  const municipio = process.env.MENSA_MUNICIPIO, ciclo = process.env.MENSA_CICLO;
-  if (!municipio || !ciclo) {
-    console.log("::notice title=Menu mensa::Imposta i secret MENSA_MUNICIPIO e MENSA_CICLO per scaricare il menu.");
+  const cfg = JSON.parse(await fs.readFile(process.argv[3] || "config/mensa.json", "utf8"));
+  const combos = (cfg.combinazioni || []).filter((c) => MUNICIPI[c.municipio] && CICLI[c.ciclo]);
+  if (!combos.length) {
+    console.log("::notice title=Menu mensa::Nessuna scuola in config/mensa.json: niente da scaricare.");
     process.exit(0);
   }
-  const days = await fetchMenu({ municipio, ciclo, days: schoolDays() });
+  const days = schoolDays();
+  const menus = {};
+  for (const c of combos) {
+    try {
+      menus[comboKey(c.municipio, c.ciclo)] = { municipio: MUNICIPI[c.municipio], ciclo: CICLI[c.ciclo], days: await fetchMenu({ municipio: c.municipio, ciclo: c.ciclo, days }) };
+    } catch (e) {
+      console.log(`::warning title=Menu mensa::Municipio ${MUNICIPI[c.municipio]}, ${CICLI[c.ciclo]}: ${e.message}`);
+    }
+  }
+  if (!Object.keys(menus).length) throw new Error("Nessun menu scaricato");
   await fs.mkdir(outFile.replace(/\/[^/]+$/, "") || ".", { recursive: true });
-  // nel file pubblico niente municipio: solo il ciclo (es. "Primaria") e i piatti
-  await fs.writeFile(outFile, JSON.stringify({ updated: new Date().toISOString(), ciclo: CICLI[ciclo] || "", days }, null, 1));
-  console.log(`Menu salvato: ${days.filter((d) => d.disponibile).length} giorni con menu su ${days.length}`);
+  await fs.writeFile(outFile, JSON.stringify({ updated: new Date().toISOString(), menus }, null, 1));
+  for (const [k, m] of Object.entries(menus)) console.log(`Menu ${k} (${m.municipio}, ${m.ciclo}): ${m.days.filter((d) => d.disponibile).length} giorni su ${m.days.length}`);
 }

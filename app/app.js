@@ -31,9 +31,11 @@
   $("modalClose").addEventListener("click", closeModal);
   modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
+  // tocco su una scheda; i controlli dentro la scheda (tendine, pulsanti, link) fanno solo il loro lavoro
   function onTap(el, fn) {
-    el.addEventListener("click", fn);
-    el.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fn(); } });
+    var inner = function (e) { return e.target !== el && e.target.closest && e.target.closest("select, button, input, form, a"); };
+    el.addEventListener("click", function (e) { if (!inner(e)) fn(); });
+    el.addEventListener("keydown", function (e) { if (!inner(e) && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); fn(); } });
   }
 
   // ---------- Adatta la grandezza allo schermo (tablet e schermi grandi) ----------
@@ -186,8 +188,11 @@
   onTap($("news"), openNews);
   $("newsMore").addEventListener("click", openNews);
 
-  // ---------- Mensa (file preparato dal job ogni mattina) ----------
-  var menu = null;
+  // ---------- Mensa (menu preparati dal job ogni mattina; la scuola si sceglie sul dispositivo) ----------
+  var MUNICIPI = [[1, "I"], [2, "II"], [4, "III"], [5, "IV"], [6, "V"], [8, "VI"], [9, "VII"], [11, "VIII"], [12, "IX"], [13, "X"], [15, "XI"], [16, "XII"], [18, "XIII"], [19, "XIV"], [20, "XV"]];
+  var CICLI = [[1, "Nido medi"], [2, "Nido grandi"], [3, "Ponte"], [4, "Infanzia"], [5, "Primaria"], [6, "Secondaria di I grado"]];
+  var menu = null, mealMissing = false;
+  function nameOf(list, v) { var x = list.filter(function (p) { return p[0] === Number(v); })[0]; return x ? x[1] : ""; }
   function todayIso() { return romeNow().slice(0, 10); }
   function dayLabel(iso) {
     if (iso === todayIso()) return "oggi";
@@ -201,32 +206,62 @@
       '<div class="side">' + (d.spuntino ? "<span>Spuntino <b>" + esc(d.spuntino) + "</b></span>" : "") + (d.merenda ? "<span>Merenda <b>" + esc(d.merenda) + "</b></span>" : "") + "</div>" +
       (d.note ? '<div class="note">' + esc(d.note) + "</div>" : "") + "</div>";
   }
-  function renderMeal() {
-    var t = todayIso(), days = menu.days || [];
-    var d = days.filter(function (x) { return x.date === t; })[0] || days.filter(function (x) { return x.date > t; })[0];
-    if (!d) { $("mealTitle").textContent = "Mensa"; $("mealBody").innerHTML = '<p class="state">Menu non ancora aggiornato.</p>'; return; }
-    $("mealTitle").textContent = "Mensa, " + dayLabel(d.date);
-    $("mealTag").textContent = menu.ciclo || "";
-    $("mealBody").innerHTML = mealHtml(d);
+  function school() { var s = store("casa.mensa"); return s && s.m && s.c ? s : null; }
+  function myMenu() { var s = school(); return s && menu && menu.menus ? menu.menus[s.m + "-" + s.c] : null; }
+  function options(list, sel) { return '<option value="">Scegli…</option>' + list.map(function (p) { return '<option value="' + p[0] + '"' + (Number(sel) === p[0] ? " selected" : "") + ">" + (list === MUNICIPI ? "Municipio " : "") + p[1] + "</option>"; }).join(""); }
+  function showChooser() {
+    var s = store("casa.mensa") || {};
+    $("mealTitle").textContent = "Mensa"; $("mealTag").textContent = "";
+    $("mealBody").innerHTML = '<form class="choose" id="mealForm"><p class="state">Scegli la scuola per vedere il menu. Resta salvata su questo dispositivo.</p>' +
+      '<label for="mealMun">Municipio</label><select id="mealMun">' + options(MUNICIPI, s.m) + "</select>" +
+      '<label for="mealCic">Ciclo</label><select id="mealCic">' + options(CICLI, s.c) + "</select>" +
+      '<button class="btn primary" type="submit">Salva</button><p class="state err" id="mealErr" hidden></p></form>';
+    $("mealForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var m = $("mealMun").value, c = $("mealCic").value;
+      if (!m || !c) { $("mealErr").textContent = "Scegli municipio e ciclo."; $("mealErr").hidden = false; return; }
+      store("casa.mensa", { m: Number(m), c: Number(c) }); renderMeal();
+    });
+    ["mealMun", "mealCic"].forEach(function (id) { $(id).addEventListener("change", function () { $("mealErr").hidden = true; }); });
     fitSoon();
   }
+  function changeLink() { return ' <button class="linkbtn" id="mealChange">cambia</button>'; }
+  function bindChange() { var b = $("mealChange"); if (b) b.addEventListener("click", function (e) { e.stopPropagation(); showChooser(); }); }
+  function renderMeal() {
+    var s = school();
+    if (!s) return showChooser();
+    var label = "Municipio " + nameOf(MUNICIPI, s.m) + ", " + nameOf(CICLI, s.c);
+    $("mealTag").innerHTML = esc(nameOf(CICLI, s.c)) + changeLink();
+    if (!menu) {
+      $("mealTitle").textContent = "Mensa";
+      $("mealBody").innerHTML = mealMissing ? '<p class="state err">Menu non disponibile. Riprovo più tardi.</p>' : '<p class="state">Caricamento menu…</p>';
+      return bindChange();
+    }
+    var mm = myMenu();
+    if (!mm) {
+      $("mealTitle").textContent = "Mensa";
+      $("mealBody").innerHTML = '<p class="state">Il menu di ' + esc(label) + " non viene ancora scaricato. Va aggiunta la scuola all'elenco <code>config/mensa.json</code> del repository.</p>";
+      return bindChange();
+    }
+    var t = todayIso(), days = mm.days || [];
+    var d = days.filter(function (x) { return x.date === t; })[0] || days.filter(function (x) { return x.date > t; })[0];
+    $("mealTitle").textContent = d ? "Mensa, " + dayLabel(d.date) : "Mensa";
+    $("mealBody").innerHTML = d ? mealHtml(d) : '<p class="state">Menu non ancora aggiornato.</p>';
+    bindChange(); fitSoon();
+  }
   function loadMeal() {
-    fetch("data/menu.json", { cache: "no-store" }).then(function (r) {
-      if (r.status === 404) throw { missing: true };
-      if (!r.ok) throw 0; return r.json();
-    }).then(function (m) { menu = m; renderMeal(); }).catch(function (e) {
-      if (menu) return;
-      $("mealBody").innerHTML = e && e.missing ? '<p class="state">Menu della mensa non ancora impostato.</p>' : '<p class="state err">Menu non disponibile. Riprovo più tardi.</p>';
-    });
+    fetch("data/menu.json", { cache: "no-store" }).then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .then(function (m) { menu = m; mealMissing = false; if (!$("mealForm")) renderMeal(); })
+      .catch(function () { mealMissing = !menu; if (!$("mealForm")) renderMeal(); });
   }
   onTap($("mealCard"), function () {
-    if (!menu || !menu.days || !menu.days.length) return;
-    var t = todayIso();
-    openModal("Mensa, prossimi giorni", menu.days.filter(function (d) { return d.date >= t; }).map(function (d) {
-      return '<div class="mday"><h4>' + esc(dayLabel(d.date)) + "</h4>" + mealHtml(d) + "</div>";
-    }).join("") || '<p class="state">Nessun giorno disponibile.</p>');
+    var mm = myMenu(); if (!mm || !mm.days || !mm.days.length) return;
+    var t = todayIso(), s = school();
+    openModal("Mensa, prossimi giorni", '<p class="sheet-note">Municipio ' + esc(nameOf(MUNICIPI, s.m)) + ", " + esc(nameOf(CICLI, s.c)) + "</p>" +
+      (mm.days.filter(function (d) { return d.date >= t; }).map(function (d) { return '<div class="mday"><h4>' + esc(dayLabel(d.date)) + "</h4>" + mealHtml(d) + "</div>"; }).join("") || '<p class="state">Nessun giorno disponibile.</p>'));
   });
-  setInterval(function () { if (menu) renderMeal(); }, 10 * 60000);
+  setInterval(function () { if (menu && !$("mealForm")) renderMeal(); }, 10 * 60000);
+  renderMeal();
 
   // ---------- Spesa (Google Tasks, con l'accesso Google di chi usa la pagina) ----------
   var SCOPE = "https://www.googleapis.com/auth/tasks", API = "https://tasks.googleapis.com/tasks/v1";
