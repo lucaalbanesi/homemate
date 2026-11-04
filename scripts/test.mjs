@@ -67,3 +67,15 @@ import http from "node:http";
   assert.equal(seen[0].q.giornoSelezionato, "04/11/2026"); assert.equal(seen[0].q.municipio, "9"); assert.equal(seen[0].cookie, "JSESSIONID=abc");
   console.log("Test menu: ok");
 }
+
+// ---- Elenco scuole ----
+import { update } from "./scuole.mjs";
+{
+  const base = { nota: "x", combinazioni: [{ municipio: 9, ciclo: 4 }] };
+  assert.deepEqual(update(base, "VII", "Primaria", "aggiungi").combinazioni, [{ municipio: 9, ciclo: 4 }, { municipio: 9, ciclo: 5 }]);
+  assert.deepEqual(update(base, "xii", "infanzia", "sostituisci").combinazioni, [{ municipio: 16, ciclo: 4 }]);
+  assert.deepEqual(update(base, "VII", "Infanzia", "aggiungi").combinazioni, [{ municipio: 9, ciclo: 4 }], "niente doppioni");
+  assert.equal(update(base, "VII", "Primaria", "aggiungi").nota, "x");
+  assert.throws(() => update(base, "XXX", "Primaria"));
+  console.log("Test scuole: ok");
+}

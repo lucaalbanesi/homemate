@@ -220,13 +220,13 @@
       e.preventDefault();
       var m = $("mealMun").value, c = $("mealCic").value;
       if (!m || !c) { $("mealErr").textContent = "Scegli municipio e ciclo."; $("mealErr").hidden = false; return; }
-      store("casa.mensa", { m: Number(m), c: Number(c) }); renderMeal();
+      store("casa.mensa", { m: Number(m), c: Number(c) }); $("mealBody").innerHTML = ""; renderMeal();
     });
     ["mealMun", "mealCic"].forEach(function (id) { $(id).addEventListener("change", function () { $("mealErr").hidden = true; }); });
     fitSoon();
   }
   function changeLink() { return ' <button class="linkbtn" id="mealChange">cambia</button>'; }
-  function bindChange() { var b = $("mealChange"); if (b) b.addEventListener("click", function (e) { e.stopPropagation(); showChooser(); }); }
+  function bindChange() { var b = $("mealChange"); if (b) b.addEventListener("click", function (e) { e.stopPropagation(); openPrefs(); }); }
   function renderMeal() {
     var s = school();
     if (!s) return showChooser();
@@ -240,7 +240,7 @@
     var mm = myMenu();
     if (!mm) {
       $("mealTitle").textContent = "Mensa";
-      $("mealBody").innerHTML = '<p class="state">Il menu di ' + esc(label) + " non viene ancora scaricato. Va aggiunta la scuola all'elenco <code>config/mensa.json</code> del repository.</p>";
+      $("mealBody").innerHTML = '<p class="state">Il menu di ' + esc(label) + " non viene ancora scaricato.</p>" + addSchoolHint(s);
       return bindChange();
     }
     var t = todayIso(), days = mm.days || [];
@@ -262,6 +262,33 @@
   });
   setInterval(function () { if (menu && !$("mealForm")) renderMeal(); }, 10 * 60000);
   renderMeal();
+
+  // Come aggiungere una scuola all'elenco del job (da GitHub, senza toccare file)
+  function addSchoolHint(s) {
+    var url = (C.repoUrl || "") + "/actions/workflows/menu.yml";
+    return '<p class="hint">Per scaricarlo apri <a href="' + esc(url) + '" target="_blank" rel="noopener">Menu mensa su GitHub</a>, tocca <b>Run workflow</b> e scegli municipio <b>' +
+      esc(nameOf(MUNICIPI, s.m)) + "</b> e ciclo <b>" + esc(nameOf(CICLI, s.c)) + "</b>. Il menu arriva in un paio di minuti.</p>";
+  }
+
+  // ---------- Impostazioni (salvate su questo dispositivo) ----------
+  function openPrefs() {
+    var s = store("casa.mensa") || {};
+    openModal("Impostazioni", '<form class="prefs" id="prefsForm"><h4>Mensa</h4>' +
+      '<label for="pMun">Municipio</label><select id="pMun">' + options(MUNICIPI, s.m) + "</select>" +
+      '<label for="pCic">Ciclo</label><select id="pCic">' + options(CICLI, s.c) + "</select>" +
+      '<button class="btn primary" type="submit">Salva</button><p class="state err" id="pErr" hidden></p><div id="pHint"></div>' +
+      '<p class="hint">Le impostazioni valgono solo per questo dispositivo.</p></form>');
+    $("prefsForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var m = $("pMun").value, c = $("pCic").value;
+      if (!m || !c) { $("pErr").textContent = "Scegli municipio e ciclo."; $("pErr").hidden = false; return; }
+      var ns = { m: Number(m), c: Number(c) };
+      store("casa.mensa", ns); renderMeal();
+      $("pHint").innerHTML = myMenu() ? '<p class="hint ok">Salvato. Il menu di questa scuola è già disponibile.</p>' : '<p class="hint ok">Salvato.</p>' + addSchoolHint(ns);
+    });
+    ["pMun", "pCic"].forEach(function (id) { $(id).addEventListener("change", function () { $("pErr").hidden = true; $("pHint").innerHTML = ""; }); });
+  }
+  $("prefsBtn").addEventListener("click", openPrefs);
 
   // ---------- Spesa (Google Tasks, con l'accesso Google di chi usa la pagina) ----------
   var SCOPE = "https://www.googleapis.com/auth/tasks", API = "https://tasks.googleapis.com/tasks/v1";

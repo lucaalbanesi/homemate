@@ -13,6 +13,8 @@ window.CASA_CONFIG = {
   // googleClientId: l'ID client OAuth "Applicazione web" creato su Google Cloud (non è segreto). Vuoto = lista non collegata.
   googleClientId: "",
   listaSpesa: "Spesa",
+  // Repository (per il link che aggiorna l'elenco delle scuole della mensa)
+  repoUrl: "https://github.com/lucaalbanesi/homemate",
   // Riposo dello schermo (solo sul tablet con Fully Kiosk o con ?kiosk nell'indirizzo)
   riposoMinuti: 2,
 };

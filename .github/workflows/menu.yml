@@ -1,6 +1,6 @@
 name: Menu mensa
-# Il sabato mattina scarica il menu della settimana dopo (lun-ven) e lo salva in data/menu.json.
-# Solo per le scuole elencate in config/mensa.json. Riparte anche quando cambia quel file.
+# Il sabato mattina scarica il menu della settimana dopo (lun-ven) per le scuole di config/mensa.json
+# e lo salva in data/menu.json. Lanciato a mano può anche cambiare la scuola seguita.
 on:
   schedule:
     - cron: "23 4 * * 6"
@@ -8,13 +8,29 @@ on:
     branches: [main]
     paths: ["config/mensa.json", "scripts/menu.mjs"]
   workflow_dispatch:
+    inputs:
+      municipio:
+        description: "Nuova scuola: municipio (vuoto = lascia l'elenco com'è)"
+        type: choice
+        default: ""
+        options: ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV"]
+      ciclo:
+        description: "Nuova scuola: ciclo"
+        type: choice
+        default: ""
+        options: ["", "Nido medi", "Nido grandi", "Ponte", "Infanzia", "Primaria", "Secondaria di I grado"]
+      modo:
+        description: "Sostituisci la scuola precedente o aggiungila alle altre"
+        type: choice
+        default: "sostituisci"
+        options: ["sostituisci", "aggiungi"]
 
 permissions:
   contents: write
 
 concurrency:
   group: menu
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   menu:
@@ -24,12 +40,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
+      - name: Cambia la scuola seguita
+        if: inputs.municipio != '' && inputs.ciclo != ''
+        env:
+          MUN: ${{ inputs.municipio }}
+          CICLO: ${{ inputs.ciclo }}
+          MODO: ${{ inputs.modo }}
+        run: node scripts/scuole.mjs "$MUN" "$CICLO" "$MODO"
       - name: Scarica il menu
         run: node scripts/menu.mjs data/menu.json
       - name: Salva se è cambiato
         run: |
-          [ -f data/menu.json ] || exit 0
-          git add data/menu.json
-          if git diff --cached --quiet; then echo "Menu invariato"; exit 0; fi
+          git add config/mensa.json
+          [ -f data/menu.json ] && git add data/menu.json
+          if git diff --cached --quiet; then echo "Niente da salvare"; exit 0; fi
           git -c user.name="homemate-bot" -c user.email="actions@users.noreply.github.com" commit -m "Menu mensa aggiornato"
           git push

@@ -31,8 +31,10 @@ Ogni notizia ha un'immagine: quella del feed ANSA, altrimenti quella dell'artico
 Settings → Pages → Source: **GitHub Actions**. Dopo il primo push il sito è online in un paio di minuti.
 
 ### 2. Menu della mensa
-Ogni dispositivo, al primo avvio, chiede municipio e ciclo e li ricorda. Il job scarica però solo le scuole elencate in
-`config/mensa.json`: per aggiungerne una, aggiungi una riga a `combinazioni`, ad esempio `{ "municipio": 9, "ciclo": 5 }`.
+Ogni dispositivo, al primo avvio, chiede municipio e ciclo e li ricorda; si cambiano dall'icona Impostazioni (o "cambia" sulla scheda).
+Il job scarica però solo le scuole elencate in `config/mensa.json`. Per cambiare o aggiungere una scuola non serve toccare il file:
+Actions → **Menu mensa** → Run workflow → scegli municipio e ciclo, e "sostituisci" (al posto della precedente) o "aggiungi".
+Il job aggiorna l'elenco e scarica subito il menu. In alternativa si modifica `combinazioni` a mano, es. `{ "municipio": 9, "ciclo": 5 }`.
 
 | Municipio | I | II | III | IV | V | VI | VII | VIII | IX | X | XI | XII | XIII | XIV | XV |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
