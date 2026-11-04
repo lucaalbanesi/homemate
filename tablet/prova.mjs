@@ -29,7 +29,8 @@ export async function probe(host) {
   const info = await getJson(`http://${host}/shelly`);
   if (!info || !(info.type || info.model || info.gen)) return null;
   const gen = info.gen || 1;
-  const dev = { host, gen, modello: info.model || info.type || "", nome: info.name || "", app: info.app || "", auth: Boolean(info.auth || info.auth_en), posizione: null, stato: "" };
+  const mac = String(info.mac || "").replace(/[^0-9a-f]/gi, "").toUpperCase().replace(/(..)(?!$)/g, "$1:");
+  const dev = { host, mac, gen, modello: info.model || info.type || "", nome: info.name || "", app: info.app || "", auth: Boolean(info.auth || info.auth_en), posizione: null, stato: "" };
   try {
     if (gen >= 2) {
       const st = await getJson(`http://${host}/rpc/Cover.GetStatus?id=0`, 2000);
@@ -57,13 +58,13 @@ export async function runScan(hosts) {
   scan.found.sort((a, b) => a.host.localeCompare(b.host, undefined, { numeric: true }));
   scan.running = false; scan.done = true;
   console.log(`Ricerca finita: ${scan.found.length} Shelly trovate`);
-  for (const d of scan.found) console.log(`  ${d.host}  gen ${d.gen}  ${d.modello}  ${d.nome}  ${d.posizione != null ? "posizione " + d.posizione + "%" : ""}`);
+  for (const d of scan.found) console.log(`  ${d.host}  ${d.mac}  gen ${d.gen}  ${d.modello}  ${d.nome}  ${d.posizione != null ? "posizione " + d.posizione + "%" : ""}`);
 }
 
 const esc = (t) => String(t ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
 function page(ip) {
-  const rows = scan.found.map((d) => `<tr><td>${esc(d.host)}</td><td>${esc(d.nome || "-")}</td><td>${esc(d.modello)}${d.app ? " (" + esc(d.app) + ")" : ""}</td><td>${d.gen}</td><td>${d.posizione != null ? d.posizione + "%" : d.auth ? "password" : "-"}</td></tr>`).join("");
+  const rows = scan.found.map((d) => `<tr><td>${esc(d.host)}</td><td>${esc(d.mac || "-")}</td><td>${esc(d.nome || "-")}</td><td>${esc(d.modello)}${d.app ? " (" + esc(d.app) + ")" : ""}</td><td>${d.gen}</td><td>${d.posizione != null ? d.posizione + "%" : d.auth ? "password" : "-"}</td></tr>`).join("");
   return `<!DOCTYPE html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>HomeMate, prova tablet</title>
 ${scan.running ? '<meta http-equiv="refresh" content="3">' : ""}
 <style>body{font-family:system-ui,sans-serif;background:#12151a;color:#eef0f3;margin:0;padding:1.25rem;line-height:1.4}h1{font-size:1.5rem;margin:0 0 1rem}
@@ -77,8 +78,10 @@ a.btn{display:inline-block;background:#9db7ff;color:#0f1830;font-weight:700;padd
 <div class="card"><h2 style="margin-top:0;font-size:1.15rem">Shelly in casa</h2>
 ${scan.running ? `<p>Ricerca in corso… ${scan.checked} indirizzi su ${scan.total}</p>` : ""}
 ${scan.done && !scan.found.length ? '<p>Nessuna Shelly trovata. Controlla che il tablet sia sul Wi-Fi di casa.</p>' : ""}
-${scan.found.length ? `<table><tr><th>Indirizzo</th><th>Nome</th><th>Modello</th><th>Gen</th><th>Posizione</th></tr>${rows}</table>
-<p class="muted">Solo lettura: nessuna tapparella è stata mossa.</p>` : ""}
+${scan.found.length ? `<table><tr><th>Indirizzo</th><th>MAC</th><th>Nome</th><th>Modello</th><th>Gen</th><th>Posizione</th></tr>${rows}</table>
+<p class="muted">Solo lettura: nessuna tapparella è stata mossa.</p>
+<h3 style="font-size:1rem">Elenco da copiare (indirizzo, MAC, modello)</h3>
+<textarea readonly rows="${scan.found.length + 1}" style="width:100%;box-sizing:border-box;background:#12151a;color:#eef0f3;border:1px solid #2f3540;border-radius:10px;padding:.5rem;font:14px monospace">${esc(scan.found.map((d) => `${d.host}\t${d.mac}\t${d.modello}`).join("\n"))}</textarea>` : ""}
 ${scan.error ? `<p>${esc(scan.error)}</p>` : ""}
 ${scan.done ? '<p><a class="btn" href="/cerca">Cerca di nuovo</a></p>' : ""}</div>
 <p class="muted">Fai uno screenshot di questa pagina e mandalo a Claude.</p></body></html>`;
