@@ -401,7 +401,7 @@
       scene: [{ id: "buongiorno", nome: "Buongiorno" }, { id: "buonanotte", nome: "Buonanotte" }, { id: "esco", nome: "Esco di casa" }]
     },
     post: function (path, body) {
-      var d = sim.data, m = path.split("/"), kind = m[3], id = m[4];
+      var d = sim.data, m = path.split("/"), kind = m[2], id = m[3];
       var setT = function (t, a, p) { if (!t.online) return; t.pos = a === "apri" ? 100 : a === "chiudi" ? 0 : a === "posizione" ? p : t.pos; };
       if (kind === "tapparelle") d.tapparelle.forEach(function (t) { if (id === "tutte" || t.id === id) setT(t, body.azione, body.pos); });
       if (kind === "luci") d.luci.forEach(function (l) { if (l.id === id) { if (body.on !== undefined) l.on = body.on; if (body.brightness !== undefined) l.brightness = body.brightness; } });
@@ -471,12 +471,14 @@
   function lightSheet(id) {
     var l = (casa.data.luci || []).filter(function (x) { return x.id === id; })[0]; if (!l) return;
     openModal("Luce " + l.nome, '<p class="sheet-note" id="lSt">' + lightText(l) + '</p><div class="ctl" style="grid-template-columns:1fr 1fr"><button class="primary" data-on="1">Accendi</button><button data-on="0">Spegni</button></div>' +
-      '<label for="lBr" class="sheet-note">Intensità</label><input class="range" id="lBr" type="range" min="1" max="100" step="1" value="' + (l.brightness || 50) + '">');
+      '<p class="sheet-note">Intensità</p><div class="ctl"><button data-br="25">25%</button><button data-br="50">50%</button><button data-br="75">75%</button></div>');
     casa.open = function () { var x = (casa.data.luci || []).filter(function (y) { return y.id === id; })[0]; if (x && $("lSt")) $("lSt").textContent = lightText(x); };
     [].forEach.call(document.querySelectorAll("#modalBody [data-on]"), function (b) {
       b.addEventListener("click", function () { casaPost("api/casa/luci/" + encodeURIComponent(id), { on: b.dataset.on === "1" }).then(function (r) { after(r); }); });
     });
-    $("lBr").addEventListener("change", function () { casaPost("api/casa/luci/" + encodeURIComponent(id), { on: true, brightness: Number(this.value) }).then(function (r) { after(r); }); });
+    [].forEach.call(document.querySelectorAll("#modalBody [data-br]"), function (b) {
+      b.addEventListener("click", function () { casaPost("api/casa/luci/" + encodeURIComponent(id), { on: true, brightness: Number(b.dataset.br) }).then(function (r) { after(r); }); });
+    });
   }
   $("casaBody").addEventListener("click", function (e) {
     var b = e.target.closest("button"); if (!b || !casa.data) return;
