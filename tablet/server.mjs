@@ -131,6 +131,10 @@ export function handler() {
     const { pathname } = new URL(req.url, "http://casa");
     try {
       if (pathname === "/api/casa" && req.method === "GET") return send(res, 200, snapshot());
+      if (pathname === "/api/casa/tado/diagnosi" && req.method === "GET") {
+        res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
+        return res.end(JSON.stringify(await tado.diagnosi(), null, 2));
+      }
       const t = pathname.match(/^\/api\/casa\/tado\/(collega|tutte|stanze\/[0-9]+)$/);
       if (t && req.method === "POST") {
         const body = await readBody(req);

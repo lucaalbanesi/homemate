@@ -522,6 +522,11 @@
       return fitSoon();
     }
     var ss = t.stanze || [];
+    if (!ss.length) {
+      $("tadoBody").innerHTML = '<p class="state">Tado è collegato ma non ho trovato stanze di riscaldamento.' + (t.errore ? " " + esc(t.errore) : "") + "</p>" +
+        '<p class="hint">Per capire perché, sul tablet apri <b>http://localhost:8080/api/casa/tado/diagnosi</b> e manda uno screenshot.</p>';
+      return fitSoon();
+    }
     var maxOn = ss.length && ss.every(function (z) { return z.manuale && z.target === 25 && z.fino; });
     var allOff = ss.length && ss.every(function (z) { return !z.acceso; });
     $("tadoBody").innerHTML = '<div class="tall"><button data-tado-all="max" class="' + (maxOn ? "hot" : "") + '">' + (maxOn ? "Max fino alle " + timeOf(ss[0].fino) : "Max per 30 min") + '</button>' +

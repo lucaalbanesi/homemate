@@ -44,11 +44,7 @@ export class Tado {
         const t = await this.form(`${this.login}/token`, { client_id: CLIENT_ID, device_code: deviceCode, grant_type: "urn:ietf:params:oauth:grant-type:device_code" });
         this.setTokens(t);
         this.pending = null;
-        const me = await this.get("/me");
-        const home = (me.homes || [])[0];
-        if (!home) throw new Error("nessuna casa trovata nell'account Tado");
-        this.saved.homeId = home.id;
-        await this.save();
+        const home = await this.pickHome();
         this.log("Tado collegato:", home.name || home.id);
         await this.refresh();
         return;
@@ -60,6 +56,37 @@ export class Tado {
     }
     this.pending = null;
   }
+  // Sceglie la casa dell'account che ha stanze di riscaldamento (un account può avere più case)
+  async pickHome() {
+    const me = await this.get("/me");
+    const homes = me.homes || [];
+    if (!homes.length) throw new Error("nessuna casa trovata nell'account Tado");
+    let chosen = homes[0], zones = [];
+    for (const h of homes) {
+      const z = heatingZones(await this.get(`/homes/${h.id}/zones`).catch(() => []));
+      if (z.length) { chosen = h; zones = z; break; }
+    }
+    this.saved = { ...this.saved, homeId: chosen.id };
+    this.zones = zones;
+    await this.save();
+    return chosen;
+  }
+
+  // Diagnosi in sola lettura: case dell'account e stanze di ognuna, senza token né dati personali
+  async diagnosi() {
+    const me = await this.get("/me");
+    const homes = [];
+    for (const h of me.homes || []) {
+      const info = await this.get(`/homes/${h.id}`).catch((e) => ({ errore: e.message }));
+      const zones = await this.get(`/homes/${h.id}/zones`).catch((e) => ({ errore: e.message }));
+      homes.push({
+        id: h.id, nome: h.name || info.name || "", generazione: info.generation || "", scelta: this.saved && this.saved.homeId === h.id,
+        stanze: Array.isArray(zones) ? zones.map((z) => ({ id: z.id, nome: z.name, tipo: z.type, dispositivi: (z.devices || []).map((d) => d.deviceType).join(", ") })) : zones,
+      });
+    }
+    return { collegato: Boolean(this.saved && this.saved.homeId), case: homes, stanzeUsate: this.zones, errore: this.error };
+  }
+
   setTokens(t) {
     this.access = { token: t.access_token, exp: Date.now() + ((t.expires_in || 600) - 30) * 1000 };
     this.saved = { ...(this.saved || {}), refresh_token: t.refresh_token || (this.saved && this.saved.refresh_token) };
@@ -102,7 +129,10 @@ export class Tado {
   async refresh() {
     if (!this.saved || !this.saved.homeId) return;
     try {
-      if (!this.zones.length) this.zones = ((await this.get(this.home("/zones"))) || []).filter((z) => z.type === "HEATING").map((z) => ({ id: z.id, nome: z.name }));
+      if (!this.zones.length) {
+        this.zones = heatingZones(await this.get(this.home("/zones")));
+        if (!this.zones.length) await this.pickHome(); // la casa salvata non ha stanze: provo le altre dell'account
+      }
       const s = await this.get(this.home("/zoneStates"));
       this.state = shapeStates(this.zones, (s && s.zoneStates) || {});
       this.updated = Date.now(); this.error = "";
@@ -155,6 +185,11 @@ export class Tado {
     await this.refresh();
     return errori;
   }
+}
+
+// Stanze di riscaldamento: tutte tranne acqua calda e climatizzatori
+export function heatingZones(list) {
+  return (Array.isArray(list) ? list : []).filter((z) => z && z.type !== "HOT_WATER" && z.type !== "AIR_CONDITIONING").map((z) => ({ id: z.id, nome: z.name }));
 }
 
 export function clampTemp(t) {

@@ -18,7 +18,10 @@ const srv = http.createServer(async (q, s) => {
     if (f.get("grant_type") === "refresh_token") { refreshes++; lastRefresh = f.get("refresh_token"); return json({ access_token: "a" + (refreshes + 1), refresh_token: "r" + (refreshes + 1), expires_in: 600 }); }
   }
   if (!String(q.headers.authorization || "").startsWith("Bearer a")) return json({}, 401);
-  if (u.pathname === "/api/v2/me") return json({ homes: [{ id: 7, name: "Casa" }] });
+  if (u.pathname === "/api/v2/me") return json({ homes: [{ id: 5, name: "Vecchia casa" }, { id: 7, name: "Casa" }] });
+  if (u.pathname === "/api/v2/homes/5/zones") return json([]);
+  if (u.pathname === "/api/v2/homes/7") return json({ id: 7, name: "Casa", generation: "PRE_LINE_X" });
+  if (u.pathname === "/api/v2/homes/5") return json({ id: 5, name: "Vecchia casa", generation: "PRE_LINE_X" });
   if (u.pathname === "/api/v2/homes/7/zones") return json([...Object.entries(zones).map(([id, z]) => ({ id: +id, name: z.name, type: "HEATING" })), { id: 9, name: "Acqua", type: "HOT_WATER" }]);
   if (u.pathname === "/api/v2/homes/7/zoneStates") {
     const zoneStates = {};
@@ -55,7 +58,10 @@ assert.equal(snap.stanze.length, 3, "solo le zone di riscaldamento");
 const sog = snap.stanze.find((z) => z.nome === "Soggiorno");
 assert.equal(sog.temp, 19.8); assert.equal(sog.umidita, 51); assert.equal(sog.target, 21); assert.equal(sog.riscalda, true); assert.equal(sog.manuale, false);
 assert.equal(snap.stanze.find((z) => z.nome === "Cameretta").finestra, true);
-assert.equal(JSON.parse(await fs.readFile(file, "utf8")).homeId, 7, "collegamento salvato sul tablet");
+assert.equal(JSON.parse(await fs.readFile(file, "utf8")).homeId, 7, "scelta la casa con le stanze, non la prima");
+const dia = await t.diagnosi();
+assert.equal(dia.case.length, 2); assert.equal(dia.case[1].scelta, true); assert.equal(dia.case[1].stanze.length, 4); assert.equal(dia.case[1].generazione, "PRE_LINE_X");
+assert.ok(!JSON.stringify(dia).includes("r1"), "nessun token nella diagnosi");
 
 // il token scade (expires_in 1): al comando successivo si rinnova e il nuovo refresh token viene salvato
 await new Promise((r) => setTimeout(r, 1100));
