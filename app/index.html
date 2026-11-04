@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Casa mia</title>
+<meta name="theme-color" content="#12151a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* Casa mia, versione online. Orizzontale: due colonne a tutta altezza; verticale e telefono: una colonna.
+   Sul tablet (kiosk) la grandezza si adatta allo schermo e dopo qualche minuto va a riposo. */
+:root {
+  --bg: #12151a;
+  --surface: #1b1f26;
+  --surface-2: #252a33;
+  --line: #2f3540;
+  --text: #eef0f3;
+  --muted: #9aa3b0;
+  --accent: #9db7ff;
+  --accent-ink: #0f1830;
+  --warn: #ff9f5a;
+  --font-display: "Bricolage Grotesque", "Trebuchet MS", sans-serif;
+  --font-body: "Figtree", "Segoe UI", Roboto, sans-serif;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { font-size: 16px; }
+html, body { margin: 0; background: var(--bg); color: var(--text); }
+body { font-family: var(--font-body); font-size: 1.0625rem; line-height: 1.35; -webkit-tap-highlight-color: transparent; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; border: 0; background: none; }
+a { color: var(--accent); }
+button:focus-visible, a:focus-visible, input:focus-visible, [tabindex]:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+h2 { font-family: var(--font-display); font-weight: 700; font-size: 1.05rem; letter-spacing: .02em; text-transform: uppercase; color: var(--muted); margin: 0 0 0.75rem; display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none; letter-spacing: 0; font-size: .85rem; }
+
+.wrap { max-width: 52rem; margin: 0 auto; padding: max(1rem, env(safe-area-inset-top)) 1rem max(1rem, env(safe-area-inset-bottom)); display: grid; gap: 0.875rem; grid-template-columns: minmax(0, 1fr); }
+.col { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.875rem; align-content: start; min-width: 0; }
+.card { background: var(--surface); border-radius: 18px; padding: 1rem 1.125rem; }
+.tap { cursor: pointer; }
+.state { color: var(--muted); padding: 0.5rem 0; }
+.state.err { color: var(--warn); }
+.more { color: var(--accent); font-size: .85rem; font-weight: 600; text-align: right; margin-top: 0.5rem; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem; min-height: 2.75rem; padding: 0 1rem; border-radius: 12px; background: var(--surface-2); font-weight: 600; text-decoration: none; color: var(--text); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); }
+
+/* Orologio */
+.head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; }
+.clock { font-family: var(--font-display); font-weight: 700; font-size: 5.2rem; line-height: .95; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.date { color: var(--muted); font-size: 1.25rem; margin-top: 0.375rem; }
+.date::first-letter { text-transform: uppercase; }
+.now { display: flex; align-items: center; gap: 0.75rem; text-align: right; }
+.now svg { width: 4.6rem; height: 4.6rem; color: var(--accent); flex: none; }
+.temp { font-family: var(--font-display); font-weight: 700; font-size: 3.4rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.cond { color: var(--muted); font-size: 1rem; }
+
+/* Meteo */
+.hours { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0.5rem; }
+.hour { background: var(--surface-2); border-radius: 12px; padding: 0.625rem 0.25rem; text-align: center; }
+.hour b { display: block; font-weight: 600; font-variant-numeric: tabular-nums; }
+.hour span { display: block; color: var(--muted); font-size: .85rem; }
+.hour svg { display: block; width: 1.875rem; height: 1.875rem; margin: 0.375rem auto; color: var(--accent); }
+.hour.past { opacity: .4; }
+.wline { display: flex; justify-content: space-between; gap: 0.625rem; color: var(--muted); margin-top: 0.75rem; font-size: .95rem; flex-wrap: wrap; }
+.wline b { color: var(--text); font-weight: 600; }
+
+/* Notizie */
+.news { display: grid; gap: 0.75rem; }
+.news > div { padding-bottom: 0.75rem; border-bottom: 1px solid var(--line); }
+.news > div:last-child { border: 0; padding-bottom: 0; }
+.news small, .nitem small { color: var(--accent); font-weight: 600; font-size: .78rem; text-transform: uppercase; letter-spacing: .04em; }
+.news p { margin: 0.125rem 0 0; font-weight: 500; }
+.news-foot { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; margin-top: 0.75rem; flex-wrap: wrap; }
+.live { width: 0.6rem; height: 0.6rem; border-radius: 50%; background: #ff5a5a; display: inline-block; }
+.nitem { padding: 0.75rem 0; border-bottom: 1px solid var(--line); }
+.nitem:last-child { border: 0; }
+.nitem h4 { margin: 0.2rem 0; font-size: 1.05rem; }
+.nitem p { margin: 0.25rem 0; color: var(--muted); font-size: .95rem; }
+.nitem a { font-size: .9rem; font-weight: 600; }
+
+/* Spesa */
+.shop { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.375rem; }
+.shop button { width: 100%; display: flex; align-items: center; gap: 0.75rem; text-align: left; background: var(--surface-2); border-radius: 12px; padding: 0.625rem 0.75rem; min-height: 2.75rem; }
+.shop .box { width: 1.25rem; height: 1.25rem; border: 2px solid var(--muted); border-radius: 6px; flex: none; }
+.shop button.done { opacity: .45; text-decoration: line-through; }
+.shop button.done .box { background: var(--accent); border-color: var(--accent); }
+.add { display: flex; gap: 0.5rem; margin-top: 0.625rem; }
+.add input { flex: 1; min-width: 0; min-height: 2.75rem; border-radius: 12px; border: 1px solid var(--line); background: var(--bg); padding: 0 0.75rem; }
+
+/* Finestra di dettaglio */
+.modal { position: fixed; inset: 0; z-index: 40; background: rgba(0,0,0,.65); display: none; align-items: center; justify-content: center; padding: 1rem; }
+.modal.show { display: flex; }
+.sheet { background: var(--surface); border-radius: 18px; padding: 1.1rem 1.25rem; width: min(40rem, 100%); max-height: 100%; overflow-y: auto; }
+.sheet-head { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 0.25rem; position: sticky; top: -1.1rem; background: var(--surface); padding: 0.25rem 0; }
+.sheet-head h3 { font-family: var(--font-display); margin: 0; font-size: 1.3rem; }
+.sheet-note { color: var(--muted); font-size: .85rem; margin: 0 0 0.5rem; }
+.wday { display: grid; grid-template-columns: 5.5rem 2.25rem minmax(0, 1fr) 7.5rem 6rem; align-items: center; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid var(--line); }
+.wday:last-child { border: 0; }
+.wday svg { width: 2.1rem; height: 2.1rem; color: var(--accent); }
+.wday .dn { font-weight: 700; }
+.wday .dc { color: var(--muted); font-size: .9rem; }
+.wday .dp { color: var(--muted); font-size: .9rem; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wday .dt { text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.wday .dt span { color: var(--muted); font-weight: 500; }
+
+/* Riposo (solo kiosk) */
+.idle { position: fixed; inset: 0; z-index: 50; background: #000; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 0.5rem; color: #4a515c; cursor: pointer; }
+.idle.show { display: flex; }
+.idle b { font-family: var(--font-display); font-weight: 700; font-size: 22vmin; line-height: 1; font-variant-numeric: tabular-nums; }
+.idle span { font-size: 3.2vmin; }
+
+@media (orientation: landscape) and (min-width: 900px) {
+  html, body { height: 100%; overflow: hidden; }
+  .wrap { max-width: none; height: 100%; padding: 0.75rem; gap: 0.75rem; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); }
+  .col { gap: 0.75rem; overflow-y: auto; scrollbar-width: none; height: 100%; }
+  .col::-webkit-scrollbar { display: none; }
+}
+@media (max-width: 640px) {
+  .clock { font-size: 3.8rem; }
+  .head { grid-template-columns: 1fr; }
+  .now { text-align: left; }
+  .hours { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .wday { grid-template-columns: 4.5rem 2rem minmax(0, 1fr) 5rem; }
+  .wday .dc { display: none; }
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <div class="col">
+    <section class="card head" aria-label="Ora e meteo attuale">
+      <div>
+        <div class="clock" id="clock">--:--</div>
+        <div class="date" id="date"></div>
+      </div>
+      <div class="now" id="now" hidden>
+        <div id="nowIcon"></div>
+        <div><div class="temp" id="temp"></div><div class="cond" id="cond"></div></div>
+      </div>
+    </section>
+
+    <section class="card tap" id="wxCard" role="button" tabindex="0" aria-label="Meteo, tocca per i prossimi 7 giorni">
+      <h2><span id="wxTitle">Meteo</span> <small id="wxTag"></small></h2>
+      <div id="wxBody"><div class="state">Caricamento meteo…</div></div>
+    </section>
+  </div>
+
+  <div class="col">
+    <section class="card" aria-label="Notizie">
+      <h2>Notizie <small id="newsTag">ANSA</small></h2>
+      <div class="news tap" id="news" role="button" tabindex="0" aria-label="Notizie, tocca per le 10 più importanti"><div class="state">Caricamento notizie…</div></div>
+      <div class="news-foot">
+        <a class="btn" id="videoLink" href="#" target="_blank" rel="noopener"><span class="live" aria-hidden="true"></span><span id="videoName">Diretta</span></a>
+        <button class="more" id="newsMore" hidden>Le 10 più importanti ›</button>
+      </div>
+    </section>
+
+    <section class="card" aria-label="Lista della spesa">
+      <h2>Spesa <small id="shopTag"></small></h2>
+      <div id="shopBody"><div class="state">Caricamento…</div></div>
+    </section>
+  </div>
+</main>
+
+<div class="modal" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="sheet">
+    <div class="sheet-head"><h3 id="modalTitle"></h3><button class="btn" id="modalClose">Chiudi</button></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+<div class="idle" id="idle" aria-label="Tocca per accendere"><b id="idleClock">--:--</b><span>Tocca per accendere</span></div>
+
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
