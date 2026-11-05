@@ -247,7 +247,7 @@ h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none
   .col::-webkit-scrollbar { display: none; }
   .col > * { flex: none; }
   .col > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
-  #colCasa > .card:first-child { flex: 1 1 auto; } /* la scheda Casa arriva in fondo, allineata alle altre colonne */
+  #lightCard { flex: 1 1 auto; } /* l'ultima scheda della colonna arriva in fondo, allineata alle altre colonne */
   /* ora e meteo sempre sulla stessa riga */
   .head { flex-wrap: nowrap; }
   .head .clock { font-size: 4.6rem; }
@@ -321,9 +321,13 @@ h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none
   </div>
 
   <div class="col" id="colCasa" hidden>
-    <section class="card" aria-label="Casa">
-      <h2>Casa <small id="casaTag"></small></h2>
+    <section class="card" id="tapCard" aria-label="Tapparelle">
+      <h2>Tapparelle <small id="casaTag"></small></h2>
       <div id="casaBody"><div class="state">Collegamento ai dispositivi…</div></div>
+    </section>
+    <section class="card" id="lightCard" aria-label="Luci" hidden>
+      <h2>Luci <small id="lightTag"></small></h2>
+      <div id="lightBody"></div>
     </section>
     <section class="card" id="robotCard" aria-label="Robot" hidden>
       <h2>Robot <small id="robotTag"></small></h2>

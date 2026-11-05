@@ -588,13 +588,14 @@
     };
     $("casaBody").innerHTML =
       ((d.scene || []).length ? '<div class="scenes">' + d.scene.map(function (sc) { return '<button class="scene" data-scene="' + esc(sc.id) + '">' + esc(sc.nome) + "</button>"; }).join("") + "</div>" : "") +
-      '<div class="block" style="margin-top:0"><div class="block-title"><strong>Tapparelle</strong></div>' +
       '<div class="pair"><button data-all="apri">Apri tutte</button><button data-all="chiudi">Chiudi tutte</button></div>' +
-      '<div class="qboxes">' + boxes.map(boxHtml).join("") + "</div></div>" +
-      ((d.luci || []).length ? '<div class="block"><div class="block-title"><strong>Luci</strong><span>' + d.luci.filter(function (l) { return l.on; }).length + " accese su " + d.luci.length + "</span></div>" +
-        '<div class="tiles">' + d.luci.map(function (l) {
-          return '<button class="tile' + (l.on ? " on" : "") + (l.online === false ? " off" : "") + '" data-light="' + esc(l.id) + '"><span class="nm">' + esc(l.nome) + '</span><span class="st">' + lightText(l) + "</span></button>";
-        }).join("") + "</div></div>" : "");
+      '<div class="qboxes">' + boxes.map(boxHtml).join("") + "</div>";
+    var luci = d.luci || [];
+    $("lightCard").hidden = !luci.length;
+    $("lightTag").textContent = luci.length ? luci.filter(function (l) { return l.on; }).length + " accese su " + luci.length : "";
+    $("lightBody").innerHTML = '<div class="tiles">' + luci.map(function (l) {
+      return '<button class="tile' + (l.on ? " on" : "") + (l.online === false ? " off" : "") + '" data-light="' + esc(l.id) + '"><span class="nm">' + esc(l.nome) + '</span><span class="st">' + lightText(l) + "</span></button>";
+    }).join("") + "</div>";
     renderTado();
     if (casa.open) casa.open();
     fitSoon();
@@ -699,7 +700,7 @@
       b.addEventListener("click", function () { casaPost("api/casa/luci/" + encodeURIComponent(id), { on: true, brightness: Number(b.dataset.br) }).then(function (r) { after(r); }); });
     });
   }
-  $("casaBody").addEventListener("click", function (e) {
+  $("colCasa").addEventListener("click", function (e) {
     var b = e.target.closest("button"); if (!b || !casa.data) return;
     if (b.dataset.scene) { b.disabled = true; casaPost("api/casa/scene/" + encodeURIComponent(b.dataset.scene)).then(function (r) { b.disabled = false; after(r, b.textContent + ": fatto"); }); }
     else if (b.dataset.all) casaPost("api/casa/tapparelle/tutte", { azione: b.dataset.all }).then(function (r) { after(r, b.dataset.all === "apri" ? "Apro tutte le tapparelle" : "Chiudo tutte le tapparelle"); });
@@ -740,7 +741,7 @@
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("sw.js").catch(function () {});
 
   // ---------- Link esterni sul tablet ----------
-  // Fully Kiosk gratuito blocca le finestre nuove: sul tablet i link (RaiNews24, ANSA) si aprono nella stessa
+  // Fully Kiosk gratuito blocca le finestre nuove: sul tablet i link (Sky TG24, ANSA) si aprono nella stessa
   // finestra, e con il tasto Indietro si torna alla pagina.
   if (KIOSK) document.addEventListener("click", function (e) {
     var a = e.target.closest && e.target.closest('a[target="_blank"]');

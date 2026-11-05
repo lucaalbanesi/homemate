@@ -13,7 +13,7 @@ La domotica (tapparelle e luci Shelly) funziona solo nella **versione di casa**,
 |---|---|---|
 | Meteo | Open-Meteo, chiesto direttamente dal browser | `app/app.js` |
 | Notizie | 6 feed ANSA, scelte da un job ogni 30 minuti e salvate in `data/news.json` | `scripts/news.mjs`, `.github/workflows/pubblica.yml` |
-| Diretta video | link a RaiNews24 | `app/config.js` |
+| Diretta video | link a Sky TG24 | `app/config.js` |
 | Mensa | sito del Comune (MESIS), per le scuole in `config/mensa.json`, letto una volta a settimana (il sabato) e salvato in `data/menu.json` | `scripts/menu.mjs`, `.github/workflows/menu.yml` |
 | Spesa | Google Tasks, lista "Spesa": online con l'accesso Google di chi usa la pagina, sul tablet collegata una volta sola | `app/app.js` |
 

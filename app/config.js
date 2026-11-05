@@ -7,8 +7,8 @@ window.CASA_CONFIG = {
   // Dalle 18 la scheda meteo mostra domani
   oraSera: 18,
   // Diretta video
-  videoUrl: "https://www.raiplay.it/dirette/rainews24",
-  videoNome: "RaiNews24 in diretta",
+  videoUrl: "https://video.sky.it/diretta/tg24",
+  videoNome: "Sky TG24 in diretta",
   // Lista della spesa su Google Tasks.
   // googleClientId: l'ID client OAuth "Applicazione web" creato su Google Cloud (non è segreto). Vuoto = lista non collegata.
   googleClientId: "169315060970-896mf80s188e8t7pbfqesdvv33ad57hl.apps.googleusercontent.com",
