@@ -19,6 +19,25 @@ const STATI = {
   18: "Torna a togliere i panni", 19: "Controlla l'acqua", 20: "Aggiunge acqua", 21: "Lavaggio in pausa", 22: "Svuota il serbatoio",
   23: "Comando a distanza", 24: "Ricarica intelligente", 25: "Seconda passata", 26: "Segue una persona", 27: "Pulizia di una zona",
 };
+// codici del robot (proprietà 2.2), come li interpreta il progetto Tasshack/dreame-vacuum.
+// 68 "togli i panni" con la base autolavante non è un problema (la base li gestisce da sola), 84 è "sconosciuto".
+const NON_ERRORI = new Set([0, 68, 84]);
+const PROBLEMI = {
+  1: "Ruote sollevate", 2: "Sensore di vuoto sporco o sospeso", 3: "Paraurti bloccato", 8: "Contenitore polvere non inserito",
+  9: "Serbatoio non inserito", 10: "Serbatoio dell'acqua vuoto", 11: "Contenitore polvere pieno", 12: "Spazzola principale bloccata",
+  13: "Spazzola laterale bloccata", 14: "Ventola bloccata", 15: "Ruota sinistra bloccata", 16: "Ruota destra bloccata",
+  17: "Robot incastrato", 18: "Robot incastrato", 19: "Non trova la base", 20: "Batteria scarica", 21: "Errore di ricarica",
+  47: "Robot bloccato", 48: "Sensore laser bloccato", 51: "Filtro intasato", 56: "Sensore laser coperto",
+  69: "Panni rimossi", 70: "Panni rimossi", 71: "I panni non girano", 72: "I panni non girano", 74: "Panni non montati bene",
+  75: "Batteria scarica, si è spento", 76: "Serbatoio acqua sporca non inserito", 80: "Robot incastrato", 81: "Robot incastrato",
+  82: "Pavimento scivoloso", 85: "Controlla i panni", 86: "Serbatoio acqua sporca pieno",
+  101: "Contenitore polvere pieno", 102: "Contenitore polvere aperto", 105: "Serbatoio dell'acqua",
+};
+export function problema(code, charging) {
+  code = Number(code) || 0;
+  if (NON_ERRORI.has(code) || (code === 20 && charging)) return null;
+  return PROBLEMI[code] || "Il robot segnala un problema (codice " + code + ")";
+}
 const PULISCE = new Set([1, 7, 12, 15, 25, 27]);
 const IN_BASE = new Set([6, 13, 8, 9, 16, 19, 20, 22, 24]);
 
@@ -30,7 +49,7 @@ export function shapeRobot(s) {
     pulisce: PULISCE.has(stato), inPausa: stato === 3 || stato === 21, inBase: IN_BASE.has(stato) || Number(s.carica) === 1,
     rientra: stato === 5,
     batteria: s.batteria == null ? null : Number(s.batteria),
-    carica: Number(s.carica) === 1, codiceErrore: Number(s.errore) || 0,
+    carica: Number(s.carica) === 1, codiceErrore: Number(s.errore) || 0, problema: problema(s.errore, Number(s.carica) === 1),
     minuti: s.tempo == null ? null : Number(s.tempo), mq: s.area == null ? null : Number(s.area),
   };
 }

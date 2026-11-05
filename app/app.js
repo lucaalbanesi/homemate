@@ -688,7 +688,7 @@
     $("robotTag").textContent = r.aggiornato ? "aggiornato " + hhmm(new Date(r.aggiornato)) : "";
     var busy = r.pulisce || r.rientra;
     $("robotBody").innerHTML = '<div class="rrow"><span class="rname"><b>' + esc(r.nome || "Robot") + "</b><span>" + esc(r.testo || "") + "</span></span>" + bat + "</div>" +
-      (r.errore ? '<p class="state err">' + esc(r.errore) + "</p>" : r.codiceErrore ? '<p class="state err">Il robot segnala un problema (codice ' + esc(r.codiceErrore) + "): guarda l'app Dreamehome.</p>" : "") +
+      (r.errore ? '<p class="state err">' + esc(r.errore) + "</p>" : r.problema ? '<p class="state err">' + esc(r.problema) + ". Guarda l'app Dreamehome.</p>" : "") +
       '<div class="ractions"><button class="primary" data-robot="avvia"' + (r.pulisce ? " disabled" : "") + ">" + (r.inPausa ? "Riprendi" : "Avvia") + "</button>" +
       '<button data-robot="pausa"' + (busy ? "" : " disabled") + ">Pausa</button>" +
       '<button data-robot="base"' + (r.inBase || r.rientra ? " disabled" : "") + ">Alla base</button></div>";

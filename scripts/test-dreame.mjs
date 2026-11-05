@@ -21,6 +21,10 @@ const post = (p) => fetch(base + p, { method: "POST", headers: { "content-type":
 try {
   assert.equal(shapeRobot({ stato: 6, batteria: 50, carica: 1 }).inBase, true);
   assert.equal(shapeRobot({ stato: 1, batteria: 50, carica: 2 }).pulisce, true);
+  assert.equal(shapeRobot({ stato: 6, errore: 68, carica: 1 }).problema, null);
+  assert.equal(shapeRobot({ stato: 6, errore: 20, carica: 1 }).problema, null);
+  assert.equal(shapeRobot({ stato: 4, errore: 12, carica: 2 }).problema, "Spazzola principale bloccata");
+  assert.match(shapeRobot({ stato: 4, errore: 999 }).problema, /codice 999/);
 
   assert.equal((await api()).robot.collegato, false);
   assert.match(await (await fetch(base + "/dreame")).text(), /Dreamehome/);
