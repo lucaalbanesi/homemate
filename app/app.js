@@ -57,7 +57,9 @@
     function over() {
       if (land) return [].some.call(document.querySelectorAll(".col"), function (c) { return c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1; }) ||
         // le righe delle tapparelle devono restare su una riga: se i pulsanti vanno a capo, i caratteri sono troppo grandi
-        [].some.call(document.querySelectorAll(".qrow, .news-foot"), function (r) { var a = r.firstElementChild, b = r.lastElementChild; return a && b && a !== b && b.offsetTop > a.offsetTop + a.offsetHeight / 2; });
+        [].some.call(document.querySelectorAll(".qrow, .news-foot"), function (r) { var a = r.firstElementChild, b = r.lastElementChild; return a && b && a !== b && b.offsetTop > a.offsetTop + a.offsetHeight / 2; }) ||
+        // almeno una notizia intera deve starci
+        (function () { var r = document.querySelector("#news > .row"); if (!r) return false; r.style.display = ""; return r.getBoundingClientRect().bottom > $("news").getBoundingClientRect().bottom + 1; })();
       return document.querySelector(".wrap").scrollHeight > innerHeight + 1;
     }
     for (var i = 0; i < 9; i++) { var mid = (lo + hi) / 2; root.style.fontSize = mid + "px"; if (over()) hi = mid; else lo = mid; }

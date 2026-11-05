@@ -248,6 +248,13 @@ h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none
   .col > * { flex: none; }
   .col > :not([hidden]) ~ :not([hidden]) { margin-top: 0.75rem; }
   #colCasa > .card:first-child { flex: 1 1 auto; } /* la scheda Casa arriva in fondo, allineata alle altre colonne */
+  /* ora e meteo sempre sulla stessa riga */
+  .head { flex-wrap: nowrap; }
+  .head .clock { font-size: 4.6rem; }
+  .head .now svg { width: 3.6rem; height: 3.6rem; }
+  .head .temp { font-size: 3rem; }
+  .head .now { margin-right: 3rem; }
+  .news p { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
   .col > .fill { flex: 1 1 0; min-height: 11rem; overflow: hidden; display: flex; flex-direction: column; }
   .fill > h2, .fill > .news-foot, .fill .add { flex: none; }
   .fill > .news, #shopBody { flex: 1 1 0; min-height: 0; overflow: hidden; }
