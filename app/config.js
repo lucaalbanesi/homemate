@@ -11,7 +11,7 @@ window.CASA_CONFIG = {
   videoNome: "RaiNews24 in diretta",
   // Lista della spesa su Google Tasks.
   // googleClientId: l'ID client OAuth "Applicazione web" creato su Google Cloud (non è segreto). Vuoto = lista non collegata.
-  googleClientId: "",
+  googleClientId: "169315060970-896mf80s188e8t7pbfqesdvv33ad57hl.apps.googleusercontent.com",
   listaSpesa: "Spesa",
   // Versione di casa (servizio sul tablet), raggiungibile solo dal Wi-Fi di casa
   homeUrl: "http://192.168.1.47:8080",
