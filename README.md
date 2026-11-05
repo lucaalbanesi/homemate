@@ -76,6 +76,12 @@ insieme le sue tapparelle con i pulsanti indicati (es. Apri · 50% · Chiudi), l
   da aprire (anche dal telefono) per approvare con il proprio account. Il collegamento resta solo sul tablet in `~/.homemate/tado.json`.
   Stato aggiornato ogni minuto (con AI Assist Tado concede 20.000 richieste al giorno). Comandi: Max per 30 min (25 °C),
   Ripristina programma, Spegni tutto (fino a Ripristina), e per ogni stanza una temperatura fino a ora+1, +2 o +3 ore.
+- **Robot Dreame** (L10s Pro Ultra Heat sull'app Dreamehome, che non lascia l'API locale): passa dal cloud Dreamehome con il
+  protocollo del progetto open source [Tasshack/dreame-vacuum](https://github.com/Tasshack/dreame-vacuum) (MIT), che l'installazione
+  scarica in `~/dreame-vacuum` insieme a Python. Si collega dalla scheda Robot ("Collega il robot", pagina `http://localhost:8080/dreame`)
+  con email e password di Dreamehome: la password non si salva, sul tablet resta solo un token che si rinnova in `~/.homemate/dreame.json`.
+  Comandi: Avvia/Riprendi, Pausa, Alla base; stato e batteria ogni 30 secondi mentre lavora, ogni 2 minuti da fermo.
+  È un'interfaccia non ufficiale: se Dreame cambia il cloud, rilanciare l'installazione aggiorna anche il componente.
 - **Installazione o aggiornamento** (in Termux, una riga):
   `curl -fsSL "https://raw.githubusercontent.com/lucaalbanesi/homemate/main/tablet/installa.sh?t=$(date +%s)" | bash`
 - **Avvio automatico**: installa Termux:Boot da F-Droid e aprilo una volta. Termux, Termux:Boot e Fully Kiosk con batteria "Senza restrizioni".

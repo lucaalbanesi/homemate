@@ -22,6 +22,21 @@ else
   git clone -q --depth 1 https://github.com/lucaalbanesi/homemate "$HOME/homemate"
 fi
 
+echo "2b/4 Componente del robot Dreame (Python, solo la prima volta qualche minuto)..."
+set +e
+if ! command -v python3 >/dev/null 2>&1 || ! python3 -c "import cryptography.x509.verification" >/dev/null 2>&1; then
+  pkg install -y python python-cryptography >/dev/null 2>&1 || echo "   (non riesco a installare Python: il robot non sarà disponibile)"
+fi
+python3 -c "import requests, certifi, paho.mqtt" >/dev/null 2>&1 || pip install -q requests certifi paho-mqtt >/dev/null 2>&1 || pip install -q --break-system-packages requests certifi paho-mqtt >/dev/null 2>&1 || echo "   (non riesco a installare le librerie Python del robot)"
+# protocollo cloud Dreamehome dal progetto open source Tasshack/dreame-vacuum (MIT)
+if [ -d "$HOME/dreame-vacuum/.git" ]; then
+  git -C "$HOME/dreame-vacuum" pull --ff-only -q >/dev/null 2>&1
+else
+  git clone -q --depth 1 https://github.com/Tasshack/dreame-vacuum "$HOME/dreame-vacuum" >/dev/null 2>&1 || echo "   (non riesco a scaricare il componente Dreame)"
+fi
+if printf '' | python3 "$HOME/homemate/tablet/dreame_bridge.py" 2>/dev/null | grep -q '"ok": true'; then echo "   Robot: pronto"; else echo "   Robot: componente non pronto (il resto funziona)"; fi
+set -e
+
 echo "3/4 Preparo l'avvio automatico..."
 mkdir -p "$HOME/.termux/boot"
 cat > "$HOME/.termux/boot/homemate.sh" <<'BOOT'

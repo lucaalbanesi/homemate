@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import * as shelly from "./shelly.mjs";
 import { Tado } from "./tado.mjs";
 import { Google, clientIdFrom } from "./google.mjs";
+import { Dreame } from "./dreame.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP = path.join(ROOT, "app");
@@ -28,6 +29,8 @@ export function useTado(t) { tado = t; }
 let google = new Google({ log, file: process.env.GOOGLE_FILE || undefined, redirect: `http://localhost:${PORT}/google/fatto`,
   auth: process.env.GOOGLE_AUTH || undefined, token: process.env.GOOGLE_TOKEN || undefined, api: process.env.GOOGLE_API || undefined });
 export function useGoogle(g) { google = g; }
+let dreame = new Dreame({ log: (...a) => log(...a), file: process.env.DREAME_FILE || undefined });
+export function useDreame(d) { dreame = d; }
 export async function loadGoogle() {
   google.clientId = process.env.GOOGLE_CLIENT_ID || await clientIdFrom(path.join(APP, "config.js"));
   const m = (await fs.readFile(path.join(APP, "config.js"), "utf8").catch(() => "")).match(/listaSpesa:\s*["']([^"']+)["']/);
@@ -72,6 +75,7 @@ export function snapshot() {
     riquadri: cfg.riquadri,
     scene: cfg.scene.map((s) => ({ id: s.id, nome: s.nome })),
     tado: tado.snapshot(),
+    robot: dreame.snapshot(),
   };
 }
 
@@ -165,6 +169,36 @@ function paginaGoogle(res, msg = "") {
 <form method="post" action="/google/incolla"><input name="url" placeholder="http://localhost:${PORT}/google/fatto?..." autocomplete="off"><button class="btn sec">Completa il collegamento</button></form>
 <form method="post" action="/google/scollega"><button class="btn sec">Cambia client secret</button></form>`);
 }
+const REGIONI = [["eu", "Europa"], ["us", "Stati Uniti"], ["cn", "Cina"], ["ru", "Russia"], ["sg", "Asia (Singapore)"], ["in", "India"]];
+function paginaDreame(res, msg = "", robots = null) {
+  const head = '<h1>Robot: collega Dreamehome</h1>' + (msg ? `<p class="${msg.startsWith("!") ? "err" : "ok"}">${escHtml(msg.replace(/^!/, ""))}</p>` : "");
+  const snap = dreame.snapshot();
+  if (robots && robots.length > 1) return pagina(res, head + '<p>Nell\'account ci sono più robot: scegli quello da mostrare.</p>' +
+    robots.map((r) => `<form method="post" action="/dreame/scegli"><input type="hidden" name="did" value="${escHtml(r.did)}"><button class="btn sec">${escHtml(r.nome)}</button></form>`).join(""));
+  if (dreame.collegato) return pagina(res, head + `<p class="ok">Collegato a <b>${escHtml(snap.nome)}</b>${snap.testo ? " · " + escHtml(snap.testo) : ""}${snap.batteria != null ? " · batteria " + snap.batteria + "%" : ""}.</p>` +
+    (snap.errore ? `<p class="err">${escHtml(snap.errore)}</p>` : "") + '<p><a class="btn" href="/">Torna a Casa mia</a></p><form method="post" action="/dreame/scollega"><button class="btn sec">Scollega</button></form>');
+  return pagina(res, head + (snap.errore ? `<p class="err">${escHtml(snap.errore)}</p>` : "") +
+    `<p>Entra con l'account dell'app <b>Dreamehome</b>. La password serve solo adesso e non viene salvata: sul tablet resta un accesso che si rinnova da solo.</p>
+<form method="post" action="/dreame/accedi"><input name="email" type="email" autocomplete="username" placeholder="Email Dreamehome" required value="${escHtml((dreame.saved && dreame.saved.username) || "")}">
+<input name="password" type="password" autocomplete="current-password" placeholder="Password" required>
+<select name="regione" style="font:inherit;width:100%;padding:10px;border-radius:10px;background:#0b0d10;color:#e8eaed;border:1px solid #444;margin:6px 0">${REGIONI.map(([v, n]) => `<option value="${v}">${n}</option>`).join("")}</select>
+<button class="btn">Collega</button></form>
+<p class="muted">Se hai creato l'account Dreamehome con Google o Apple, nell'app imposta prima una password (Profilo → Impostazioni account).</p>`);
+}
+async function rottaDreame(req, res, pathname) {
+  try {
+    if (pathname === "/dreame" && req.method === "GET") return paginaDreame(res);
+    if (pathname === "/dreame/accedi" && req.method === "POST") {
+      const f = await readForm(req);
+      const robots = await dreame.accedi(f.email, f.password, f.regione);
+      return robots.length > 1 ? paginaDreame(res, "", robots) : paginaDreame(res, "Collegato!");
+    }
+    if (pathname === "/dreame/scegli" && req.method === "POST") { await dreame.scegli((await readForm(req)).did); return paginaDreame(res, "Collegato!"); }
+    if (pathname === "/dreame/scollega" && req.method === "POST") { await dreame.scollega(); return paginaDreame(res, "Scollegato."); }
+    return send(res, 404, "non trovato", "text/plain");
+  } catch (e) { log("Dreame:", e.message); return paginaDreame(res, "!" + (e.message || e)); }
+}
+
 async function rottaGoogle(req, res, pathname, url) {
   try {
     if (pathname === "/google" && req.method === "GET") return paginaGoogle(res);
@@ -184,7 +218,14 @@ export function handler() {
   return async (req, res) => {
     const url = new URL(req.url, "http://casa"), { pathname } = url;
     if (pathname === "/google" || pathname.startsWith("/google/")) return rottaGoogle(req, res, pathname, url);
+    if (pathname === "/dreame" || pathname.startsWith("/dreame/")) return rottaDreame(req, res, pathname);
     try {
+      const rb = pathname.match(/^\/api\/casa\/robot\/(avvia|pausa|base)$/);
+      if (rb && req.method === "POST") {
+        let errori = [];
+        try { await dreame.comando(rb[1]); } catch (e) { errori = ["Robot: " + (e.message || e)]; }
+        return send(res, errori.length ? 207 : 200, { ok: !errori.length, errori, ...snapshot() });
+      }
       if (pathname === "/api/casa/spesa" && req.method === "GET") return send(res, 200, await google.voci());
       const sp = pathname.match(/^\/api\/casa\/spesa(?:\/([\w-]+)\/fatto)?$/);
       if (sp && req.method === "POST") {
@@ -265,6 +306,9 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   await loadConfig();
   await tado.load(); await tado.refresh();
   await loadGoogle();
+  await dreame.load(); dreame.refresh();
+  // stato del robot: ogni 30 secondi mentre lavora, ogni 2 minuti quando è fermo
+  setInterval(() => { const st = dreame.state; if (dreame.collegato && (!st || st.pulisce || st.rientra || Date.now() - dreame.updated > 115000)) dreame.refresh(); }, 30000);
   setInterval(() => tado.refresh(), 60000);
   execFile("git", ["-C", ROOT, "log", "-1", "--format=%h %s"], (_, out) => { startedAt = (out || "").trim(); log("Versione", startedAt || "sconosciuta"); });
   await refresh();

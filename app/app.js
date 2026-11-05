@@ -498,7 +498,8 @@
       tado: { collegato: true, collegamento: null, aggiornato: new Date().toISOString(), errore: "", stanze: [
         { id: 1, nome: "Soggiorno", temp: 19.8, umidita: 52, acceso: true, target: 21, manuale: false, fino: null, riscalda: true, finestra: false, online: true },
         { id: 2, nome: "Camera", temp: 20.4, umidita: 48, acceso: true, target: 20, manuale: false, fino: null, riscalda: false, finestra: false, online: true },
-        { id: 3, nome: "Cameretta", temp: 20.6, umidita: 50, acceso: true, target: 20.5, manuale: false, fino: null, riscalda: false, finestra: true, online: true }] }
+        { id: 3, nome: "Cameretta", temp: 20.6, umidita: 50, acceso: true, target: 20.5, manuale: false, fino: null, riscalda: false, finestra: true, online: true }] },
+      robot: { collegato: true, nome: "L10s Pro Ultra Heat", testo: "In carica", stato: 6, pulisce: false, inPausa: false, inBase: true, rientra: false, batteria: 87, carica: true, codiceErrore: 0, errore: "", aggiornato: new Date().toISOString() }
     },
     post: function (path, body) {
       var d = sim.data, m = path.split("/"), kind = m[2], id = m[3];
@@ -517,6 +518,10 @@
           if (body.programma) { z.manuale = false; z.fino = null; z.target = 20.5; z.acceso = true; }
           else { z.acceso = true; z.target = body.temp; z.manuale = true; z.fino = later(body.ore); z.riscalda = body.temp > z.temp; }
         });
+      }
+      if (kind === "robot") {
+        var R = { avvia: [1, "Sta pulendo", true, false, false], pausa: [3, "In pausa", false, true, false], base: [5, "Torna alla base", false, false, true] }[id];
+        Object.assign(d.robot, { stato: R[0], testo: R[1], pulisce: R[2], inPausa: R[3], rientra: R[4], inBase: false, carica: false });
       }
       if (kind === "luci") d.luci.forEach(function (l) { if (l.id === id) { if (body.on !== undefined) l.on = body.on; if (body.brightness !== undefined) l.brightness = body.brightness; } });
       if (kind === "scene") { var a = id === "buongiorno" ? "apri" : "chiudi"; d.tapparelle.forEach(function (t) { setT(t, a); }); if (id !== "buongiorno") d.luci.forEach(function (l) { l.on = false; }); }
@@ -596,6 +601,7 @@
     $("lightBody").innerHTML = '<div class="tiles">' + luci.map(function (l) {
       return '<button class="tile' + (l.on ? " on" : "") + (l.online === false ? " off" : "") + '" data-light="' + esc(l.id) + '"><span class="nm">' + esc(l.nome) + '</span><span class="st">' + lightText(l) + "</span></button>";
     }).join("") + "</div>";
+    renderRobot(d.robot);
     renderTado();
     if (casa.open) casa.open();
     fitSoon();
@@ -667,6 +673,26 @@
     }
     else if (b.dataset.zone) zoneSheet(b.dataset.zone);
   });
+  // ---------- Robot (Dreame, dal cloud Dreamehome tramite il servizio di casa) ----------
+  function renderRobot(r) {
+    var card = $("robotCard");
+    card.hidden = !r; $("colCasa").classList.toggle("conRobot", !!r);
+    if (!r) return;
+    if (!r.collegato) {
+      $("robotTag").textContent = "";
+      $("robotBody").innerHTML = '<p class="state">' + (r.errore ? esc(r.errore) + ". " : "") + (r.nome ? "Accesso a Dreamehome scaduto." : "Collega il robot con l'account Dreamehome. Si fa una volta sola.") + "</p>" +
+        '<a class="btn primary" href="/dreame">' + (r.nome ? "Ricollega" : "Collega il robot") + "</a>";
+      return;
+    }
+    var bat = r.batteria == null ? "" : '<span class="rbat"><span class="bar"><i style="width:' + r.batteria + '%"></i></span>' + r.batteria + "%" + (r.carica ? " in carica" : "") + "</span>";
+    $("robotTag").textContent = r.aggiornato ? "aggiornato " + hhmm(new Date(r.aggiornato)) : "";
+    var busy = r.pulisce || r.rientra;
+    $("robotBody").innerHTML = '<div class="rrow"><span class="rname"><b>' + esc(r.nome || "Robot") + "</b><span>" + esc(r.testo || "") + "</span></span>" + bat + "</div>" +
+      (r.errore ? '<p class="state err">' + esc(r.errore) + "</p>" : r.codiceErrore ? '<p class="state err">Il robot segnala un problema (codice ' + esc(r.codiceErrore) + "): guarda l'app Dreamehome.</p>" : "") +
+      '<div class="ractions"><button class="primary" data-robot="avvia"' + (r.pulisce ? " disabled" : "") + ">" + (r.inPausa ? "Riprendi" : "Avvia") + "</button>" +
+      '<button data-robot="pausa"' + (busy ? "" : " disabled") + ">Pausa</button>" +
+      '<button data-robot="base"' + (r.inBase || r.rientra ? " disabled" : "") + ">Alla base</button></div>";
+  }
   function after(res, ok) {
     if (res && res.tapparelle) { casa.data = res; renderCasa(); }
     if (res && res.errori && res.errori.length) toast("Fatto, tranne: " + res.errori.join(", "));
@@ -712,6 +738,10 @@
     }
     else if (b.dataset.tap) shutterSheet(b.dataset.tap);
     else if (b.dataset.light) lightSheet(b.dataset.light);
+    else if (b.dataset.robot) {
+      var msg = { avvia: "Il robot parte", pausa: "Robot in pausa", base: "Il robot torna alla base" }[b.dataset.robot];
+      b.disabled = true; casaPost("api/casa/robot/" + b.dataset.robot).then(function (r) { after(r, msg); });
+    }
   });
   $("modalClose").addEventListener("click", function () { casa.open = null; });
   function pollCasa() {
