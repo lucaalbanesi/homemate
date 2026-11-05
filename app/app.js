@@ -1,6 +1,15 @@
 // Casa mia, versione online: orologio, meteo (Open-Meteo), notizie (file del sito), spesa (Google Tasks).
 (function () {
   "use strict";
+  // WebView vecchie (prima di Chrome 84) ignorano "gap" nei flexbox: lo si scopre e si usano i margini (classe nogap)
+  (function () {
+    var d = document.createElement("div");
+    d.style.cssText = "display:flex;flex-direction:column;row-gap:1px;position:absolute;visibility:hidden";
+    d.appendChild(document.createElement("div")); d.appendChild(document.createElement("div"));
+    document.body.appendChild(d);
+    if (d.scrollHeight !== 1) document.documentElement.className += " nogap";
+    document.body.removeChild(d);
+  })();
   var C = window.CASA_CONFIG || {};
   var KIOSK = typeof window.fully !== "undefined" || /[?&]kiosk\b/.test(location.search);
 
@@ -570,8 +579,8 @@
       '<div class="trooms">' + ss.map(function (z) {
         var pills = (z.finestra ? '<span class="tpill win">Finestra aperta</span>' : "") + (z.fino ? '<span class="tpill man">fino alle ' + timeOf(z.fino) + "</span>" : z.manuale ? '<span class="tpill man">Manuale</span>' : "") + (z.riscalda && z.acceso ? '<span class="tpill heat">Riscalda</span>' : "");
         var target = !z.acceso ? "spento" : "→ " + deg(z.target) + (z.manuale ? "" : " programma");
-        return '<button class="troom' + (z.acceso ? "" : " off") + '" data-zone="' + esc(z.id) + '"><span><span class="tn">' + esc(z.nome) + "</span>" + pills +
-          '<span class="ts" style="display:block">' + (z.online === false ? "Non risponde" : z.umidita != null ? "Umidità " + z.umidita + "%" : "") + '</span></span><span><span class="tt" style="display:block">' + deg(z.temp) + '</span><span class="tg" style="display:block">' + target + "</span></span></button>";
+        return '<button class="troom' + (z.acceso ? "" : " off") + '" data-zone="' + esc(z.id) + '"><span class="tin"><span><span class="tn">' + esc(z.nome) + "</span>" + pills +
+          '<span class="ts" style="display:block">' + (z.online === false ? "Non risponde" : z.umidita != null ? "Umidità " + z.umidita + "%" : "") + '</span></span><span><span class="tt" style="display:block">' + deg(z.temp) + '</span><span class="tg" style="display:block">' + target + "</span></span></span></button>";
       }).join("") + "</div>" + (t.errore ? '<p class="state err">' + esc(t.errore) + "</p>" : "");
     fitSoon();
   }

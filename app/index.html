@@ -182,7 +182,8 @@ h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none
 .tall button { min-height: 2.75rem; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); font-weight: 700; font-size: .88rem; padding: 0 0.375rem; line-height: 1.15; }
 .tall button.hot { background: #ff9f5a; color: #2a1400; border: 0; }
 .trooms { display: grid; gap: 0.375rem; }
-.troom { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 0.5rem; width: 100%; text-align: left; background: var(--surface-2); border-radius: 12px; padding: 0.5rem 0.75rem; }
+.troom { display: block; width: 100%; text-align: left; background: var(--surface-2); border-radius: 12px; padding: 0.5rem 0.75rem; }
+.troom .tin { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; grid-gap: 0.5rem; }
 .troom.off { opacity: .55; }
 .troom .tn { font-weight: 700; }
 .troom .ts { color: var(--muted); font-size: .82rem; }
@@ -239,6 +240,21 @@ h2 small { font-family: var(--font-body); font-weight: 500; text-transform: none
   .wday { grid-template-columns: 4.5rem 2rem minmax(0, 1fr) 5rem; }
   .wday .dc { display: none; }
 }
+
+/* Browser vecchi (WebView prima di Chrome 84, come quella del tablet): niente "gap" nei flexbox.
+   app.js aggiunge la classe nogap e qui gli stessi spazi si fanno con i margini. */
+.nogap h2 > * + *, .nogap .btn > * + *, .nogap .add > * + *, .nogap .pair > * + * { margin-left: 0.5rem; }
+.nogap .now > * + *, .nogap .shop button > * + * { margin-left: 0.75rem; }
+.nogap .acts > * + * { margin-left: 0.375rem; }
+.nogap .chip .mini { margin-left: 0.25rem; }
+.nogap .tstep > * + * { margin-left: 1.25rem; }
+.nogap .sheet-head > * + * { margin-left: 1rem; }
+.nogap .idle > * + * { margin-top: 0.5rem; }
+.nogap .head > :not(:last-child) { margin-right: 1rem; }
+.nogap .wline > :not(:last-child) { margin-right: 0.625rem; }
+.nogap .news-foot > :not(:last-child) { margin-right: 0.75rem; }
+.nogap .meal .side > :not(:last-child) { margin-right: 1.25rem; }
+.nogap .block-title > :not(:last-child), .nogap .qrow > :not(:last-child), .nogap .qhead > :not(:last-child) { margin-right: 0.5rem; }
 </style>
 </head>
 <body>
