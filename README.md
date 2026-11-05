@@ -15,7 +15,7 @@ La domotica (tapparelle e luci Shelly) funziona solo nella **versione di casa**,
 | Notizie | 6 feed ANSA, scelte da un job ogni 30 minuti e salvate in `data/news.json` | `scripts/news.mjs`, `.github/workflows/pubblica.yml` |
 | Diretta video | link a RaiNews24 | `app/config.js` |
 | Mensa | sito del Comune (MESIS), per le scuole in `config/mensa.json`, letto una volta a settimana (il sabato) e salvato in `data/menu.json` | `scripts/menu.mjs`, `.github/workflows/menu.yml` |
-| Spesa | Google Tasks, lista "Spesa", con l'accesso Google di chi usa la pagina | `app/app.js` |
+| Spesa | Google Tasks, lista "Spesa": online con l'accesso Google di chi usa la pagina, sul tablet collegata una volta sola | `app/app.js` |
 
 Il repository è pubblico: in `app/config.js` non vanno mai password o chiavi segrete. L'ID client Google non è un segreto.
 
@@ -50,13 +50,20 @@ Elenco e menu sono pubblici come tutto il repository: si vede quale municipio e 
 ### 3. Lista della spesa (Google Tasks)
 1. Vai su https://console.cloud.google.com, crea un progetto "Casa mia".
 2. API e servizi → Libreria → abilita **Google Tasks API**.
-3. Schermata di consenso OAuth → Esterno → nome "Casa mia" → in "Utenti di prova" aggiungi la tua email e quella di Alessandra.
-4. Credenziali → Crea credenziali → **ID client OAuth** → tipo **Applicazione web** →
-   Origini JavaScript autorizzate: `https://lucaalbanesi.github.io`.
-5. Copia l'ID client (finisce con `.apps.googleusercontent.com`) in `app/config.js`, alla voce `googleClientId`.
+3. Schermata di consenso OAuth (Google Auth Platform) → Esterno → nome "Casa mia", la tua email come supporto e contatto.
+   In **Pubblico** premi **Pubblica app** (In produzione): in "Test" l'accesso del tablet scadrebbe ogni 7 giorni.
+4. Client → Crea client → tipo **Applicazione web**, nome "Casa mia":
+   - Origini JavaScript autorizzate: `https://lucaalbanesi.github.io`
+   - URI di reindirizzamento autorizzati: `http://localhost:8080/google/fatto`
+5. Copia l'**ID client** (finisce con `.apps.googleusercontent.com`) in `app/config.js`, alla voce `googleClientId`.
+   Il **client secret** (inizia con `GOCSPX-`) NON va nel repository: si incolla solo sul tablet (sotto).
 
-Al primo accesso Google mostra "app non verificata": è normale per un'app personale, si continua con Avanzate.
-L'accesso dura circa un'ora; poi la scheda chiede di toccare "Accedi con Google" di nuovo (da migliorare per il tablet).
+Al primo accesso Google mostra "Google non ha verificato questa app": è normale per un'app personale, si continua con Avanzate → Vai a Casa mia.
+
+- **Online** (telefono, PC): la scheda Spesa mostra "Accedi con Google"; l'accesso dura circa un'ora, poi si ritocca il pulsante.
+- **Tablet di casa**: si collega una volta sola e resta collegato. Sul tablet apri **Chrome** (non Fully Kiosk: Google lì non fa entrare)
+  all'indirizzo `http://localhost:8080/google`, incolla il client secret, tocca **Collega Google** e approva.
+  Il collegamento resta in `~/.homemate/google.json` sul tablet. Dalla stessa pagina si può scollegare.
 
 ## Versione di casa (tablet)
 

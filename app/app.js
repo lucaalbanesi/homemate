@@ -383,7 +383,38 @@
     s.onerror = function () { shop('<p class="state err">Non riesco a contattare Google. Riprovo tra un minuto.</p>'); setTimeout(initGoogle, 60000); };
     document.head.appendChild(s);
   }
-  setInterval(function () { if (token() && !document.activeElement.matches("#addItem")) loadShop(); }, 2 * 60000);
+  setInterval(function () { if (!document.activeElement.matches("#addItem") && (SHOP.casa || token())) loadShop(); }, 2 * 60000);
+
+  // Sul tablet di casa la lista passa dal servizio di casa, collegato a Google una volta sola:
+  // niente accessi che scadono ogni ora e niente finestre popup (che Fully Kiosk blocca).
+  var SHOP = { casa: false };
+  function casaShop(path, body) {
+    var opt = body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : { cache: "no-store" };
+    return fetch(path, opt).then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { if (!r.ok && d.collegata !== false) throw d; return d; }); });
+  }
+  function useCasaShop() {
+    SHOP.casa = true;
+    gapi = function (p, opt) { // stessa interfaccia della versione online, risposte del servizio di casa
+      opt = opt || {};
+      if (/\/tasks\/[^/?]+$/.test(p)) return casaShop("api/casa/spesa/" + encodeURIComponent(decodeURIComponent(p.split("/").pop())) + "/fatto", {});
+      if (/\/tasks$/.test(p)) return casaShop("api/casa/spesa", { titolo: JSON.parse(opt.body).title });
+      if (p === "/users/@me/lists") return casaShop("api/casa/spesa", { crea: true }).then(function () { return { id: "casa" }; });
+      return Promise.reject({});
+    };
+    loadShop = function () {
+      casaShop("api/casa/spesa").then(function (d) {
+        if (d.collegata === false) {
+          $("shopTag").textContent = "";
+          return shop('<p class="state">' + (d.errore ? esc(d.errore) + ". " : "") + 'Per collegare la lista, sul tablet apri <b>Chrome</b> all\'indirizzo <b>localhost:8080/google</b>. Si fa una volta sola.</p>');
+        }
+        if (d.manca) throw { noList: true };
+        listId = "casa";
+        items = d.voci.map(function (v) { return { id: v.id, title: v.titolo, status: "needsAction" }; });
+        renderShop();
+      }).catch(shopError);
+    };
+    loadShop();
+  }
 
   // ---------- Casa (solo dalla versione di casa sul tablet; #prova la simula da ovunque) ----------
   var casa = { mode: "", data: null, timer: null, open: null };
@@ -633,15 +664,15 @@
       document.body.classList.add("casa"); $("colCasa").hidden = false; $("casaOnline").hidden = true;
       pollCasa();
     };
-    if (PROVA) return show("prova");
-    casaGet().then(function (d) { casa.data = d; show("casa"); }, function () {
-      casa.mode = "online";
+    if (PROVA) { initGoogle(); return show("prova"); }
+    casaGet().then(function (d) { casa.data = d; show("casa"); useCasaShop(); }, function () {
+      casa.mode = "online"; initGoogle();
       if (C.homeUrl) { $("homeLink").href = C.homeUrl + "/" + (KIOSK ? "?kiosk" : ""); $("casaOnline").hidden = false; fitSoon(); }
     });
   }
 
   // ---------- Avvio ----------
-  loadWeather(); loadNews(); loadMeal(); initGoogle(); startCasa();
+  loadWeather(); loadNews(); loadMeal(); startCasa();
   setInterval(loadWeather, 15 * 60000);
   setInterval(loadNews, 10 * 60000);
   setInterval(loadMeal, 60 * 60000);

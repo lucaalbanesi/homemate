@@ -11,6 +11,7 @@ import { execFile } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import * as shelly from "./shelly.mjs";
 import { Tado } from "./tado.mjs";
+import { Google, clientIdFrom } from "./google.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const APP = path.join(ROOT, "app");
@@ -24,6 +25,15 @@ const log = (...a) => console.log(new Date().toLocaleString("it-IT", { timeZone:
 let cfg = { tapparelle: [], luci: [], scene: [] };
 let tado = new Tado({ log, file: process.env.TADO_FILE || undefined, api: process.env.TADO_API || undefined, login: process.env.TADO_LOGIN || undefined, hops: process.env.TADO_HOPS || undefined });
 export function useTado(t) { tado = t; }
+let google = new Google({ log, file: process.env.GOOGLE_FILE || undefined, redirect: `http://localhost:${PORT}/google/fatto`,
+  auth: process.env.GOOGLE_AUTH || undefined, token: process.env.GOOGLE_TOKEN || undefined, api: process.env.GOOGLE_API || undefined });
+export function useGoogle(g) { google = g; }
+export async function loadGoogle() {
+  google.clientId = process.env.GOOGLE_CLIENT_ID || await clientIdFrom(path.join(APP, "config.js"));
+  const m = (await fs.readFile(path.join(APP, "config.js"), "utf8").catch(() => "")).match(/listaSpesa:\s*["']([^"']+)["']/);
+  if (m) google.lista = m[1];
+  await google.load();
+}
 const stato = new Map(); // id -> ultimo stato letto
 
 export async function loadConfig(file = CONFIG) {
@@ -126,10 +136,65 @@ function readBody(req) {
   });
 }
 
+function readForm(req) {
+  return new Promise((resolve, reject) => {
+    let b = "";
+    req.on("data", (c) => { b += c; if (b.length > 10000) { reject(new Error("troppo grande")); req.destroy(); } });
+    req.on("end", () => resolve(Object.fromEntries(new URLSearchParams(b))));
+  });
+}
+const escHtml = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+function pagina(res, corpo, status = 200) {
+  send(res, status, `<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Collega Google</title>
+<style>body{font:17px/1.5 system-ui,sans-serif;background:#111418;color:#e8eaed;margin:0;padding:24px;max-width:640px}h1{font-size:22px}a,button{font:inherit}
+.btn{display:inline-block;background:#a8c7fa;color:#0b1a33;border:0;border-radius:12px;padding:12px 18px;text-decoration:none;font-weight:600;margin:6px 0}
+.sec{background:#22262c;color:#e8eaed}input{font:inherit;width:100%;box-sizing:border-box;padding:10px;border-radius:10px;border:1px solid #444;background:#0b0d10;color:#e8eaed;margin:6px 0}
+.ok{color:#8fd19e}.err{color:#f6ae6b}.muted{color:#9aa0a6;font-size:15px}code{background:#22262c;padding:1px 5px;border-radius:5px}</style></head><body>${corpo}</body></html>`, "text/html; charset=utf-8");
+}
+function paginaGoogle(res, msg = "") {
+  const st = google.stato();
+  const head = '<h1>Lista della spesa: collega Google</h1>' + (msg ? `<p class="${msg.startsWith("!") ? "err" : "ok"}">${escHtml(msg.replace(/^!/, ""))}</p>` : "");
+  if (!st.clientId) return pagina(res, head + '<p class="err">Manca il client ID in <code>app/config.js</code> (googleClientId). Aggiornalo su GitHub, poi sul tablet <code>cd ~/homemate && git pull</code> e riavvia.</p>');
+  if (!st.secret) return pagina(res, head + `<p>Incolla il <b>client secret</b> del client OAuth creato su Google Cloud. Resta solo su questo tablet.</p>
+<form method="post" action="/google/chiave"><input name="secret" autocomplete="off" placeholder="GOCSPX-..." required><button class="btn">Salva</button></form>`);
+  if (st.collegato) return pagina(res, head + `<p class="ok">Il tablet è collegato a Google Tasks. Lista usata: <b>${escHtml(st.lista)}</b>.</p>
+<p><a class="btn" href="/">Torna a Casa mia</a></p><form method="post" action="/google/scollega"><button class="btn sec">Scollega</button></form>`);
+  return pagina(res, head + `${st.errore ? `<p class="err">${escHtml(st.errore)}</p>` : ""}<p>Apri questa pagina con <b>Chrome sul tablet</b> all'indirizzo <code>http://localhost:${PORT}/google</code> (Google non accetta l'accesso da Fully Kiosk), poi:</p>
+<p><a class="btn" href="/google/vai">Collega Google</a></p>
+<p class="muted">Se hai aperto il collegamento da un altro dispositivo, alla fine il browser mostrerà «pagina non raggiungibile» su localhost: copia l'indirizzo completo dalla barra e incollalo qui.</p>
+<form method="post" action="/google/incolla"><input name="url" placeholder="http://localhost:${PORT}/google/fatto?..." autocomplete="off"><button class="btn sec">Completa il collegamento</button></form>
+<form method="post" action="/google/scollega"><button class="btn sec">Cambia client secret</button></form>`);
+}
+async function rottaGoogle(req, res, pathname, url) {
+  try {
+    if (pathname === "/google" && req.method === "GET") return paginaGoogle(res);
+    if (pathname === "/google/chiave" && req.method === "POST") { await google.setSecret((await readForm(req)).secret); return paginaGoogle(res, "Client secret salvato."); }
+    if (pathname === "/google/vai" && req.method === "GET") { res.writeHead(302, { location: google.linkUrl(), "cache-control": "no-store" }); return res.end(); }
+    if (pathname === "/google/fatto" && req.method === "GET") { await google.finish(Object.fromEntries(url.searchParams)); return paginaGoogle(res, "Collegato! La lista della spesa ora compare su Casa mia."); }
+    if (pathname === "/google/incolla" && req.method === "POST") { await google.finish((await readForm(req)).url || ""); return paginaGoogle(res, "Collegato! La lista della spesa ora compare su Casa mia."); }
+    if (pathname === "/google/scollega" && req.method === "POST") {
+      if (google.collegato) await google.scollega(); else { google.saved = {}; await google.save(); }
+      return paginaGoogle(res, google.pronto ? "Scollegato." : "Fatto. Incolla il nuovo client secret.");
+    }
+    return send(res, 404, "non trovato", "text/plain");
+  } catch (e) { log("Google:", e.message); return paginaGoogle(res, "!" + (e.message || e)); }
+}
+
 export function handler() {
   return async (req, res) => {
-    const { pathname } = new URL(req.url, "http://casa");
+    const url = new URL(req.url, "http://casa"), { pathname } = url;
+    if (pathname === "/google" || pathname.startsWith("/google/")) return rottaGoogle(req, res, pathname, url);
     try {
+      if (pathname === "/api/casa/spesa" && req.method === "GET") return send(res, 200, await google.voci());
+      const sp = pathname.match(/^\/api\/casa\/spesa(?:\/([\w-]+)\/fatto)?$/);
+      if (sp && req.method === "POST") {
+        const body = await readBody(req);
+        if (sp[1]) await google.fatto(sp[1]);
+        else if (body.crea) await google.creaLista();
+        else await google.aggiungi(body.titolo);
+        log(`Spesa: ${sp[1] ? "presa una voce" : body.crea ? "lista creata" : "aggiunto «" + String(body.titolo).trim() + "»"}`);
+        return send(res, 200, { ok: true, ...await google.voci() });
+      }
       if (pathname === "/api/casa" && req.method === "GET") return send(res, 200, snapshot());
       if (pathname === "/api/casa/tado/diagnosi" && req.method === "GET") {
         res.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
@@ -173,7 +238,7 @@ export function handler() {
       res.end(body);
     } catch (e) {
       if (e.code === "ENOENT" || e.code === "EISDIR") return send(res, 404, "non trovato", "text/plain");
-      send(res, e.status || 502, { error: String(e.message || e) });
+      send(res, e.status || 502, { error: String(e.message || e), ...(e.scollegato ? { collegata: false } : {}) });
     }
   };
 }
@@ -199,6 +264,7 @@ let startedAt = "";
 if (import.meta.url === `file://${process.argv[1]}`) {
   await loadConfig();
   await tado.load(); await tado.refresh();
+  await loadGoogle();
   setInterval(() => tado.refresh(), 60000);
   execFile("git", ["-C", ROOT, "log", "-1", "--format=%h %s"], (_, out) => { startedAt = (out || "").trim(); log("Versione", startedAt || "sconosciuta"); });
   await refresh();

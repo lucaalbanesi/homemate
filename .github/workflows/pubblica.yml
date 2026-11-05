@@ -35,7 +35,7 @@ jobs:
         with:
           node-version: 20
       - name: Test
-        run: node scripts/test.mjs
+        run: for t in scripts/test*.mjs; do node "$t"; done
       - name: Prepara il sito
         run: |
           mkdir -p _site/data
