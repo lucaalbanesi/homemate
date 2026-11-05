@@ -475,23 +475,27 @@
       if (list.some(function (t) { return t.online === false; })) return '<span class="note">Non risponde</span>';
       return "";
     };
+    var chipsHtml = function (q) {
+      return (q.etichette || []).map(function (id, i) {
+        var t = byId[id] || {};
+        return '<button class="chip' + (t.online === false ? " off" : "") + (moving(t) ? " mv" : "") + '" data-tap="' + esc(id) + '" aria-label="' + esc(t.nome || id) + '">' + (i + 1) + '<span class="mini"><i style="width:' + (t.pos == null ? 0 : t.pos) + '%"></i></span></button>';
+      }).join("");
+    };
     var boxHtml = function (q) {
       var all = [];
       q.righe.forEach(function (r) { all = all.concat(r.tapparelle); });
       var offAll = all.every(function (id) { return byId[id] && byId[id].online === false; });
-      var head, rows = "";
+      var name, html;
       if (q.righe.length === 1 && !q.righe[0].nome) {
+        // una riga sola: nome, etichette (o barra) e pulsanti sulla stessa riga
         var r0 = q.righe[0], one = r0.tapparelle.length === 1 && !q.etichette ? byId[r0.tapparelle[0]] : null;
-        head = '<div class="qrow"><span class="qname">' + (one ? '<button class="qtap" data-tap="' + esc(one.id) + '">' + esc(q.nome) + "</button>" + bar(one.pos) : esc(q.nome)) + note(all) + "</span>" + acts(r0) + "</div>";
+        name = one ? '<button class="qtap" data-tap="' + esc(one.id) + '">' + esc(q.nome) + "</button>" + bar(one.pos) : '<span class="qname">' + esc(q.nome) + "</span>" + chipsHtml(q);
+        html = '<div class="qrow"><span class="qhead">' + name + note(all) + "</span>" + acts(r0) + "</div>";
       } else {
-        head = '<div class="qtitle">' + esc(q.nome) + note(all) + "</div>";
-        rows = q.righe.map(function (r) { return '<div class="qrow"><span class="qsub">' + esc(r.nome || "") + "</span>" + acts(r) + "</div>"; }).join("");
+        html = '<div class="qhead qtop"><span class="qname">' + esc(q.nome) + "</span>" + chipsHtml(q) + note(all) + "</div>" +
+          q.righe.map(function (r) { return '<div class="qrow"><span class="qsub">' + esc(r.nome || "") + "</span>" + acts(r) + "</div>"; }).join("");
       }
-      var chips = (q.etichette || []).map(function (id, i) {
-        var t = byId[id] || {};
-        return '<button class="chip' + (t.online === false ? " off" : "") + (moving(t) ? " mv" : "") + '" data-tap="' + esc(id) + '" aria-label="' + esc(t.nome || id) + '">' + (i + 1) + '<span class="mini"><i style="width:' + (t.pos == null ? 0 : t.pos) + '%"></i></span></button>';
-      }).join("");
-      return '<div class="qbox' + (offAll ? " off" : "") + '">' + head + rows + (chips ? '<div class="chips">' + chips + "</div>" : "") + "</div>";
+      return '<div class="qbox' + (offAll ? " off" : "") + '">' + html + "</div>";
     };
     $("casaBody").innerHTML =
       ((d.scene || []).length ? '<div class="scenes">' + d.scene.map(function (sc) { return '<button class="scene" data-scene="' + esc(sc.id) + '">' + esc(sc.nome) + "</button>"; }).join("") + "</div>" : "") +
