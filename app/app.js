@@ -35,8 +35,8 @@
 
   // ---------- Finestra di dettaglio ----------
   var modal = $("modal");
-  function openModal(title, html) { $("modalTitle").textContent = title; $("modalBody").innerHTML = html; modal.classList.add("show"); $("modalClose").focus(); }
-  function closeModal() { modal.classList.remove("show"); }
+  function openModal(title, html) { shopOpen = false; $("modalTitle").textContent = title; $("modalBody").innerHTML = html; modal.classList.add("show"); $("modalClose").focus(); }
+  function closeModal() { shopOpen = false; modal.classList.remove("show"); }
   $("modalClose").addEventListener("click", closeModal);
   modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
   document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
@@ -52,16 +52,28 @@
   function fit() {
     var root = document.documentElement;
     var land = matchMedia("(orientation: landscape) and (min-width: 900px)").matches;
-    if (!land && !(KIOSK && innerWidth >= 540)) { root.style.fontSize = ""; return; }
-    var lo = 10, hi = 22;
+    if (!land && !(KIOSK && innerWidth >= 540)) { root.style.fontSize = ""; trimFill(); return; }
+    var lo = 10, hi = land ? 28 : 22;
     function over() {
-      if (land) return [].some.call(document.querySelectorAll(".col"), function (c) { return c.scrollHeight > c.clientHeight + 1; });
+      if (land) return [].some.call(document.querySelectorAll(".col"), function (c) { return c.scrollHeight > c.clientHeight + 1 || c.scrollWidth > c.clientWidth + 1; }) ||
+        // le righe delle tapparelle devono restare su una riga: se i pulsanti vanno a capo, i caratteri sono troppo grandi
+        [].some.call(document.querySelectorAll(".qrow, .news-foot"), function (r) { var a = r.firstElementChild, b = r.lastElementChild; return a && b && a !== b && b.offsetTop > a.offsetTop + a.offsetHeight / 2; });
       return document.querySelector(".wrap").scrollHeight > innerHeight + 1;
     }
     for (var i = 0; i < 9; i++) { var mid = (lo + hi) / 2; root.style.fontSize = mid + "px"; if (over()) hi = mid; else lo = mid; }
     root.style.fontSize = lo + "px";
+    trimFill();
+  }
+  // Notizie e spesa riempiono lo spazio che resta: si mostrano le voci che ci stanno intere, le altre nella vista estesa
+  function trimFill() {
+    var land = matchMedia("(orientation: landscape) and (min-width: 900px)").matches;
+    var rows = [].slice.call(document.querySelectorAll("#news > .row"));
+    rows.forEach(function (r, i) { r.style.display = land || i < 2 ? "" : "none"; });
+    if (land) { var box = $("news"); for (var n = rows.length - 1; n > 0 && box.scrollHeight > box.clientHeight + 1; n--) rows[n].style.display = "none"; }
+    if (typeof trimShop === "function") trimShop(land);
   }
   function fitSoon() { clearTimeout(fitTimer); fitTimer = setTimeout(fit, 120); }
+  var trimShop = null;
   addEventListener("resize", fitSoon);
   addEventListener("orientationchange", fitSoon);
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(fit);
@@ -169,10 +181,10 @@
     if (t && t.tagName === "IMG" && t.classList.contains("thumb")) { var d = document.createElement("div"); d.className = "thumb none"; d.innerHTML = PAPER; t.replaceWith(d); }
   }, true);
   function renderNews() {
-    $("news").innerHTML = news.items.slice(0, 2).map(function (it) {
+    $("news").innerHTML = news.items.slice(0, 8).map(function (it) {
       return '<div class="row">' + img(it) + "<div><small>" + esc(news.source) + (it.time ? " · " + ago(it.time) : "") + "</small><p>" + esc(it.title) + "</p></div></div>";
     }).join("");
-    $("newsMore").hidden = news.items.length <= 2;
+    $("newsMore").hidden = news.items.length <= 1;
     $("newsTag").textContent = "ANSA · " + hhmm(new Date(news.updated));
     fitSoon();
   }
@@ -209,9 +221,10 @@
     if (iso === t.toISOString().slice(0, 10)) return "domani";
     return new Date(iso + "T12:00:00").toLocaleDateString("it-IT", { weekday: "long", day: "numeric" });
   }
-  function mealHtml(d) {
+  // compatto nella scheda (piatti uno dopo l'altro), in elenco nella vista estesa
+  function mealHtml(d, list) {
     if (!d.disponibile) return '<p class="state">Nessun menu per questo giorno' + (d.note ? ": " + esc(d.note) : ".") + "</p>";
-    return '<div class="meal">' + (d.pranzo.length ? '<div class="main">' + d.pranzo.map(esc).join("<br>") + "</div>" : "") +
+    return '<div class="meal">' + (d.pranzo.length ? (list ? '<div class="main">' + d.pranzo.map(esc).join("<br>") : '<div class="main inline">' + d.pranzo.map(esc).join("<i>·</i> ")) + "</div>" : "") +
       '<div class="side">' + (d.spuntino ? "<span>Spuntino <b>" + esc(d.spuntino) + "</b></span>" : "") + (d.merenda ? "<span>Merenda <b>" + esc(d.merenda) + "</b></span>" : "") + "</div>" +
       (d.note ? '<div class="note">' + esc(d.note) + "</div>" : "") + "</div>";
   }
@@ -267,7 +280,7 @@
     var mm = myMenu(); if (!mm || !mm.days || !mm.days.length) return;
     var t = todayIso(), s = school();
     openModal("Mensa, prossimi giorni", '<p class="sheet-note">Municipio ' + esc(nameOf(MUNICIPI, s.m)) + ", " + esc(nameOf(CICLI, s.c)) + "</p>" +
-      (mm.days.filter(function (d) { return d.date >= t; }).map(function (d) { return '<div class="mday"><h4>' + esc(dayLabel(d.date)) + "</h4>" + mealHtml(d) + "</div>"; }).join("") || '<p class="state">Nessun giorno disponibile.</p>'));
+      (mm.days.filter(function (d) { return d.date >= t; }).map(function (d) { return '<div class="mday"><h4>' + esc(dayLabel(d.date)) + "</h4>" + mealHtml(d, true) + "</div>"; }).join("") || '<p class="state">Nessun giorno disponibile.</p>'));
   });
   setInterval(function () { if (menu && !$("mealForm")) renderMeal(); }, 10 * 60000);
   renderMeal();
@@ -331,29 +344,63 @@
       listId = l.id; store("casa.spesa.lista", listId); return listId;
     });
   }
-  function renderShop() {
-    var open = items.filter(function (t) { return t.status !== "completed"; });
-    $("shopTag").textContent = open.length ? open.length + " da prendere" : "";
-    shop((open.length ? '<ul class="shop">' + open.map(function (t) {
+  var shopOpen = false;
+  function shopItems() { return items.filter(function (t) { return t.status !== "completed"; }); }
+  function shopListHtml(open, rest) {
+    return (open.length ? '<ul class="shop">' + open.map(function (t) {
       return '<li><button data-id="' + esc(t.id) + '"><span class="box" aria-hidden="true"></span><span>' + esc(t.title) + "</span></button></li>";
-    }).join("") + "</ul>" : '<p class="state">Lista vuota.</p>') +
-      '<form class="add" id="addForm"><input id="addItem" aria-label="Cosa aggiungere alla lista" placeholder="Aggiungi alla lista" autocomplete="off" maxlength="120"><button class="btn primary" type="submit">Aggiungi</button></form>');
-    $("addForm").addEventListener("submit", function (e) {
+    }).join("") + (rest ? '<li class="restli" hidden><button class="rest" type="button"></button></li>' : "") + "</ul>" : '<p class="state">Lista vuota.</p>') +
+      '<form class="add"><input class="addItem" aria-label="Cosa aggiungere alla lista" placeholder="Aggiungi alla lista" autocomplete="off" maxlength="120"><button class="btn primary" type="submit">Aggiungi</button></form>';
+  }
+  function bindShop(root) {
+    var form = root.querySelector("form.add");
+    form.addEventListener("submit", function (e) {
       e.preventDefault();
-      var v = $("addItem").value.trim(); if (!v) return;
-      $("addItem").value = "";
+      var inp = form.querySelector("input"), v = inp.value.trim(); if (!v) return;
+      inp.value = "";
       items.unshift({ id: "tmp" + Date.now(), title: v, status: "needsAction" }); renderShop();
       gapi("/lists/" + listId + "/tasks", { method: "POST", body: JSON.stringify({ title: v }) }).then(loadShop, shopError);
     });
-    [].forEach.call(document.querySelectorAll(".shop button"), function (b) {
+    [].forEach.call(root.querySelectorAll(".shop button[data-id]"), function (b) {
       b.addEventListener("click", function () {
         var id = b.getAttribute("data-id"); if (id.indexOf("tmp") === 0) return;
         b.classList.add("done");
+        items.forEach(function (t) { if (t.id === id) t.status = "completed"; });
         gapi("/lists/" + listId + "/tasks/" + encodeURIComponent(id), { method: "PATCH", body: JSON.stringify({ status: "completed" }) })
           .then(function () { setTimeout(loadShop, 600); }, shopError);
       });
     });
+    var r = root.querySelector(".rest"); if (r) r.addEventListener("click", openShop);
   }
+  function renderShop() {
+    var open = shopItems();
+    $("shopTag").textContent = open.length ? open.length + " da prendere ›" : "";
+    var typing = document.activeElement && document.activeElement.matches("#shopBody .addItem") ? document.activeElement.value : null;
+    shop(shopListHtml(open, true));
+    bindShop($("shopBody"));
+    if (typing !== null) { var inp = $("shopBody").querySelector(".addItem"); inp.value = typing; inp.focus(); }
+    if (shopOpen && modal.classList.contains("show")) renderShopSheet(); else shopOpen = false;
+  }
+  // in orizzontale la scheda mostra le voci che ci stanno; le altre con "altre N" e nella vista estesa
+  trimShop = function (land) {
+    var ul = $("shopBody").querySelector(".shop"); if (!ul) return;
+    var lis = [].slice.call(ul.querySelectorAll("li:not(.restli)")), rest = ul.querySelector(".restli");
+    lis.forEach(function (li) { li.style.display = ""; }); rest.hidden = true;
+    if (!land) return;
+    for (var n = lis.length; n > 0 && ul.scrollHeight > ul.clientHeight + 1; n--) {
+      lis[n - 1].style.display = "none";
+      rest.hidden = false; rest.querySelector("button").textContent = "altre " + (lis.length - n + 1) + " ›";
+    }
+  };
+  function renderShopSheet() {
+    $("modalBody").innerHTML = shopListHtml(shopItems(), false);
+    bindShop($("modalBody"));
+  }
+  function openShop() {
+    if (!listId) return;
+    openModal("Lista della spesa", ""); shopOpen = true; renderShopSheet();
+  }
+  $("shopTag").addEventListener("click", openShop);
   function shopError(e) {
     if (e && e.auth) return showLogin("Accesso a Google scaduto.");
     if (e && e.noList) {
@@ -392,7 +439,7 @@
     s.onerror = function () { shop('<p class="state err">Non riesco a contattare Google. Riprovo tra un minuto.</p>'); setTimeout(initGoogle, 60000); };
     document.head.appendChild(s);
   }
-  setInterval(function () { if (!document.activeElement.matches("#addItem") && (SHOP.casa || token())) loadShop(); }, 2 * 60000);
+  setInterval(function () { if (!document.activeElement.matches(".addItem") && (SHOP.casa || token())) loadShop(); }, 2 * 60000);
 
   // Sul tablet di casa la lista passa dal servizio di casa, collegato a Google una volta sola:
   // niente accessi che scadono ogni ora e niente finestre popup (che Fully Kiosk blocca).
@@ -578,9 +625,12 @@
       '<button data-tado-all="programma">Ripristina programma</button><button data-tado-all="spegni">' + (allOff ? "Tutto spento" : "Spegni tutto") + "</button></div>" +
       '<div class="trooms">' + ss.map(function (z) {
         var pills = (z.finestra ? '<span class="tpill win">Finestra aperta</span>' : "") + (z.fino ? '<span class="tpill man">fino alle ' + timeOf(z.fino) + "</span>" : z.manuale ? '<span class="tpill man">Manuale</span>' : "") + (z.riscalda && z.acceso ? '<span class="tpill heat">Riscalda</span>' : "");
-        var target = !z.acceso ? "spento" : "→ " + deg(z.target) + (z.manuale ? "" : " programma");
-        return '<button class="troom' + (z.acceso ? "" : " off") + '" data-zone="' + esc(z.id) + '"><span class="tin"><span><span class="tn">' + esc(z.nome) + "</span>" + pills +
-          '<span class="ts" style="display:block">' + (z.online === false ? "Non risponde" : z.umidita != null ? "Umidità " + z.umidita + "%" : "") + '</span></span><span><span class="tt" style="display:block">' + deg(z.temp) + '</span><span class="tg" style="display:block">' + target + "</span></span></span></button>";
+        var target = !z.acceso ? "spento" : "→ " + deg(z.target);
+        var sub = z.online === false ? "Non risponde" : z.umidita != null ? "Umidità " + z.umidita + "%" : "";
+        return '<button class="troom' + (z.acceso ? "" : " off") + '" data-zone="' + esc(z.id) + '"><span class="tin">' +
+          '<span class="tn">' + esc(z.nome) + '</span><span class="tt">' + deg(z.temp) + "</span>" +
+          '<span class="ts">' + sub + '</span><span class="tg">' + target + "</span>" +
+          (pills ? '<span class="tpills">' + pills + "</span>" : "") + "</span></button>";
       }).join("") + "</div>" + (t.errore ? '<p class="state err">' + esc(t.errore) + "</p>" : "");
     fitSoon();
   }
