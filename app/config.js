@@ -18,5 +18,5 @@ window.CASA_CONFIG = {
   // Repository (per il link che aggiorna l'elenco delle scuole della mensa)
   repoUrl: "https://github.com/lucaalbanesi/homemate",
   // Riposo dello schermo (solo sul tablet con Fully Kiosk o con ?kiosk nell'indirizzo)
-  riposoMinuti: 2,
+  riposoMinuti: 1,
 };
