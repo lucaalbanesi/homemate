@@ -1,49 +1,75 @@
 {
- "updated": "2026-11-04T10:48:50.131Z",
+ "updated": "2026-11-07T11:12:42.478Z",
  "menus": {
   "9-4": {
    "municipio": "VII",
    "ciclo": "Infanzia",
    "days": [
     {
-     "date": "2026-11-04",
-     "spuntino": "Schiacciatine",
-     "pranzo": [
-      "Risotto al pomodoro",
-      "Sformato di platessa",
-      "Fagiolini all'olio",
-      "Pane",
-      "Frutta"
-     ],
-     "merenda": "Ciambellone",
-     "note": "",
-     "disponibile": true
-    },
-    {
-     "date": "2026-11-05",
-     "spuntino": "Yogurt",
-     "pranzo": [
-      "Farro e lenticchie",
-      "Mozzarella vaccina",
-      "Patate all'olio",
-      "Pane integrale",
-      "Frutta"
-     ],
-     "merenda": "Focaccia rossa soffice",
-     "note": "",
-     "disponibile": true
-    },
-    {
-     "date": "2026-11-06",
+     "date": "2026-11-09",
      "spuntino": "Cracker",
      "pranzo": [
-      "Pasta al sugo di spigola",
-      "Uova strapazzate/Frittata",
-      "Finocchi gratinati",
-      "Pane",
-      "Spremuta di arancia"
+      "Pizza rossa",
+      "Ricotta",
+      "Carote al tegame",
+      "Frutta"
      ],
-     "merenda": "Frutta di stagione con biscotti frollini al cacao",
+     "merenda": "Succo di frutta senza zuccheri aggiunti e biscotti frollini al miele",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-10",
+     "spuntino": "Schiacciatine",
+     "pranzo": [
+      "Risotto con zucca",
+      "Frittata con patate",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Panino all'olio con marmellata",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-11",
+     "spuntino": "Yogurt",
+     "pranzo": [
+      "Pasta e piselli",
+      "Fuso di pollo arrosto",
+      "Finocchi al tegame",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Focaccia bianca",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-12",
+     "spuntino": "Plum cake allo yogurt",
+     "pranzo": [
+      "Pasta al burro e parmigiano",
+      "Hamburger di bovino",
+      "Insalata verde",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Banana",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-13",
+     "spuntino": "Fette biscottate con cioccolata al latte/fondente",
+     "pranzo": [
+      "Pasta al pomodoro",
+      "Medaglioni di merluzzo",
+      "Spinaci all'olio",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Frutta di stagione",
      "note": "",
      "disponibile": true
     }
