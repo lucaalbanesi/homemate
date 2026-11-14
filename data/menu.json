@@ -1,75 +1,76 @@
 {
- "updated": "2026-11-07T11:12:42.478Z",
+ "updated": "2026-11-14T11:38:22.349Z",
  "menus": {
   "9-4": {
    "municipio": "VII",
    "ciclo": "Infanzia",
    "days": [
     {
-     "date": "2026-11-09",
-     "spuntino": "Cracker",
-     "pranzo": [
-      "Pizza rossa",
-      "Ricotta",
-      "Carote al tegame",
-      "Frutta"
-     ],
-     "merenda": "Succo di frutta senza zuccheri aggiunti e biscotti frollini al miele",
-     "note": "",
-     "disponibile": true
-    },
-    {
-     "date": "2026-11-10",
+     "date": "2026-11-16",
      "spuntino": "Schiacciatine",
      "pranzo": [
-      "Risotto con zucca",
-      "Frittata con patate",
+      "Riso alla parmigiana",
+      "Arrosto di tacchino/Bocconcini di tacchino al limone",
+      "Bieta all'olio",
       "Pane",
       "Frutta"
      ],
-     "merenda": "Panino all'olio con marmellata",
+     "merenda": "Ciambellone",
      "note": "",
      "disponibile": true
     },
     {
-     "date": "2026-11-11",
+     "date": "2026-11-17",
      "spuntino": "Yogurt",
      "pranzo": [
-      "Pasta e piselli",
-      "Fuso di pollo arrosto",
-      "Finocchi al tegame",
+      "Pasta al pesto senza aglio",
+      "Bastoncini di merluzzo della cuoca",
+      "Carote alla julienne",
       "Pane",
       "Frutta"
      ],
-     "merenda": "Focaccia bianca",
+     "merenda": "Focaccia rossa soffice",
      "note": "",
      "disponibile": true
     },
     {
-     "date": "2026-11-12",
-     "spuntino": "Plum cake allo yogurt",
+     "date": "2026-11-18",
+     "spuntino": "Cracker",
      "pranzo": [
-      "Pasta al burro e parmigiano",
-      "Hamburger di bovino",
-      "Insalata verde",
+      "Pasta al ragù di carne di agnello",
+      "Tortino di patate",
       "Pane",
-      "Frutta"
+      "Spremuta di arancia"
      ],
-     "merenda": "Banana",
+     "merenda": "Frutta di stagione con biscotti frollini al cacao",
      "note": "",
      "disponibile": true
     },
     {
-     "date": "2026-11-13",
+     "date": "2026-11-19",
      "spuntino": "Fette biscottate con cioccolata al latte/fondente",
      "pranzo": [
-      "Pasta al pomodoro",
-      "Medaglioni di merluzzo",
-      "Spinaci all'olio",
+      "Crema di verdure con pasta",
+      "Uova strapazzate/Frittata",
+      "Fagiolini all'olio",
       "Pane",
       "Frutta"
      ],
      "merenda": "Frutta di stagione",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-20",
+     "spuntino": "Plum cake allo yogurt",
+     "pranzo": [
+      "Pasta con fagioli",
+      "Provolone dolce",
+      "Cavolfiori gratinati",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Banana",
      "note": "",
      "disponibile": true
     }
