@@ -1,44 +1,17 @@
 {
- "updated": "2026-11-14T11:38:22.349Z",
+ "updated": "2026-11-21T12:50:58.985Z",
  "menus": {
   "9-4": {
    "municipio": "VII",
    "ciclo": "Infanzia",
    "days": [
     {
-     "date": "2026-11-16",
-     "spuntino": "Schiacciatine",
-     "pranzo": [
-      "Riso alla parmigiana",
-      "Arrosto di tacchino/Bocconcini di tacchino al limone",
-      "Bieta all'olio",
-      "Pane",
-      "Frutta"
-     ],
-     "merenda": "Ciambellone",
-     "note": "",
-     "disponibile": true
-    },
-    {
-     "date": "2026-11-17",
-     "spuntino": "Yogurt",
-     "pranzo": [
-      "Pasta al pesto senza aglio",
-      "Bastoncini di merluzzo della cuoca",
-      "Carote alla julienne",
-      "Pane",
-      "Frutta"
-     ],
-     "merenda": "Focaccia rossa soffice",
-     "note": "",
-     "disponibile": true
-    },
-    {
-     "date": "2026-11-18",
+     "date": "2026-11-23",
      "spuntino": "Cracker",
      "pranzo": [
-      "Pasta al ragù di carne di agnello",
-      "Tortino di patate",
+      "Pasta al pomodoro",
+      "Uova strapazzate/Frittata",
+      "Spinaci all'olio",
       "Pane",
       "Spremuta di arancia"
      ],
@@ -47,12 +20,12 @@
      "disponibile": true
     },
     {
-     "date": "2026-11-19",
+     "date": "2026-11-24",
      "spuntino": "Fette biscottate con cioccolata al latte/fondente",
      "pranzo": [
-      "Crema di verdure con pasta",
-      "Uova strapazzate/Frittata",
-      "Fagiolini all'olio",
+      "Pasta al cavolfiore bianco",
+      "Straccetti di bovino",
+      "Finocchi al tegame",
       "Pane",
       "Frutta"
      ],
@@ -61,16 +34,44 @@
      "disponibile": true
     },
     {
-     "date": "2026-11-20",
+     "date": "2026-11-25",
      "spuntino": "Plum cake allo yogurt",
      "pranzo": [
-      "Pasta con fagioli",
-      "Provolone dolce",
-      "Cavolfiori gratinati",
+      "Risotto con zucca",
+      "Caciotta dolce",
+      "Insalata verde",
       "Pane",
       "Frutta"
      ],
      "merenda": "Banana",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-26",
+     "spuntino": "Schiacciatine",
+     "pranzo": [
+      "Crema di ceci con pasta",
+      "Fuso di pollo arrosto",
+      "Fagiolini all'olio",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Ciambellone",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-11-27",
+     "spuntino": "Yogurt",
+     "pranzo": [
+      "Pasta all'olio e parmigiano",
+      "Bastoncini di merluzzo della cuoca",
+      "Carote alla julienne",
+      "Pane integrale",
+      "Frutta"
+     ],
+     "merenda": "Focaccia rossa soffice",
      "note": "",
      "disponibile": true
     }
