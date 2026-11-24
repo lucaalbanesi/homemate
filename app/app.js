@@ -486,7 +486,7 @@
     data: {
       casa: true, tapparelle: [["soggiorno1", "Soggiorno 1"], ["soggiorno2", "Soggiorno 2"], ["camera1", "Camera 1"], ["camera2", "Camera 2"], ["camera3", "Camera 3"], ["cameretta1", "Cameretta 1"], ["cameretta2", "Cameretta 2"], ["bagno", "Bagno"], ["studio", "Studio"]]
         .map(function (t, i) { return { id: t[0], nome: t[1], online: i !== 7, pos: [100, 100, 60, 100, 100, 100, 50, null, 0][i], state: "stopped" }; }),
-      luci: [{ id: "soggiorno", nome: "Soggiorno", online: true, on: true, brightness: 70 }],
+      luci: [{ id: "salone", nome: "Salone", online: true, on: true, brightness: 70, regolabile: true }, { id: "divano", nome: "Divano", online: true, on: false, brightness: null, watt: 0, regolabile: false }],
       riquadri: [
         { id: "soggiorno", nome: "Soggiorno", righe: [{ id: "soggiorno", tapparelle: ["soggiorno1", "soggiorno2"], comandi: ["apri", "50", "chiudi"] }], etichette: ["soggiorno1", "soggiorno2"] },
         { id: "camera", nome: "Camera", righe: [{ id: "camera-finestra", nome: "Finestra", tapparelle: ["camera1"], comandi: ["apri", "25", "50", "chiudi"] }, { id: "camera-porta", nome: "Porta e finestra", tapparelle: ["camera2", "camera3"], comandi: ["apri", "50", "chiudi"] }], etichette: ["camera1", "camera2", "camera3"] },
@@ -523,7 +523,7 @@
         var R = { avvia: [1, "Sta pulendo", true, false, false], pausa: [3, "In pausa", false, true, false], base: [5, "Torna alla base", false, false, true] }[id];
         Object.assign(d.robot, { stato: R[0], testo: R[1], pulisce: R[2], inPausa: R[3], rientra: R[4], inBase: false, carica: false });
       }
-      if (kind === "luci") d.luci.forEach(function (l) { if (l.id === id) { if (body.on !== undefined) l.on = body.on; if (body.brightness !== undefined) l.brightness = body.brightness; } });
+      if (kind === "luci") d.luci.forEach(function (l) { if (l.id === id) { if (body.on !== undefined) l.on = body.on; if (body.brightness !== undefined) { l.on = true; if (l.regolabile !== false) l.brightness = body.brightness; } if (l.regolabile === false) l.watt = l.on ? 42 : 0; } });
       if (kind === "scene") { var a = id === "buongiorno" ? "apri" : "chiudi"; d.tapparelle.forEach(function (t) { setT(t, a); }); if (id !== "buongiorno") d.luci.forEach(function (l) { l.on = false; }); }
       var err = (kind === "scene" || id === "tutte") ? ["Bagno: non risponde"] : [];
       return Promise.resolve(Object.assign({ ok: !err.length, errori: err }, JSON.parse(JSON.stringify(d))));
@@ -552,7 +552,7 @@
     return t.pos + "% aperta";
   }
   function sheetNote(t) { return t.online === false ? "Non risponde" : moving(t) ? "In movimento" : ""; }
-  function lightText(l) { if (l.online === false) return "Non risponde"; return l.on ? "Accesa" + (l.brightness != null ? " · " + l.brightness + "%" : "") : "Spenta"; }
+  function lightText(l) { if (l.online === false) return "Non risponde"; return l.on ? "Accesa" + (l.brightness != null ? " · " + l.brightness + "%" : "") + (l.watt != null && l.watt >= 1 ? " · " + Math.round(l.watt) + " W" : "") : "Spenta"; }
   function renderCasa() {
     var d = casa.data; if (!d) return;
     var ts = d.tapparelle || [], byId = {};
@@ -717,7 +717,7 @@
   function lightSheet(id) {
     var l = (casa.data.luci || []).filter(function (x) { return x.id === id; })[0]; if (!l) return;
     openModal("Luce " + l.nome, '<p class="sheet-note" id="lSt">' + lightText(l) + '</p><div class="ctl" style="grid-template-columns:1fr 1fr"><button class="primary" data-on="1">Accendi</button><button data-on="0">Spegni</button></div>' +
-      '<p class="sheet-note">Intensità</p><div class="ctl"><button data-br="25">25%</button><button data-br="50">50%</button><button data-br="75">75%</button></div>');
+      (l.regolabile === false ? "" : '<p class="sheet-note">Intensità</p><div class="ctl"><button data-br="25">25%</button><button data-br="50">50%</button><button data-br="75">75%</button></div>'));
     casa.open = function () { var x = (casa.data.luci || []).filter(function (y) { return y.id === id; })[0]; if (x && $("lSt")) $("lSt").textContent = lightText(x); };
     [].forEach.call(document.querySelectorAll("#modalBody [data-on]"), function (b) {
       b.addEventListener("click", function () { casaPost("api/casa/luci/" + encodeURIComponent(id), { on: b.dataset.on === "1" }).then(function (r) { after(r); }); });

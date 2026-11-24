@@ -68,7 +68,7 @@ Al primo accesso Google mostra "Google non ha verificato questa app": è normale
 ## Versione di casa (tablet)
 
 Il servizio `tablet/server.mjs` gira in Termux sul tablet, porta 8080. Serve la stessa pagina del sito, in più la sezione Casa:
-legge e comanda le Shelly elencate in `config/casa.json` (tapparelle Plus 2PM con l'API locale, il Dimmer 2 del soggiorno)
+legge e comanda le Shelly elencate in `config/casa.json` (tapparelle Plus 2PM con l'API locale, le luci del soggiorno: Salone col Dimmer 2 e Divano con lo Shelly 1PM)
 e prende notizie e menu dal sito online. In `riquadri` si decide come la pagina raggruppa le tapparelle: ogni riga comanda
 insieme le sue tapparelle con i pulsanti indicati (es. Apri · 50% · Chiudi), le etichette 1, 2, 3 muovono una tapparella alla volta.
 

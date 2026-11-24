@@ -50,7 +50,7 @@ export async function loadConfig(file = CONFIG) {
 // ---- Stato dei dispositivi, aggiornato in sottofondo ----
 async function readOne(kind, d) {
   try {
-    const s = kind === "tapparella" ? await shelly.coverStatus(d.ip) : await shelly.lightStatus(d.ip);
+    const s = kind === "tapparella" ? await shelly.coverStatus(d.ip) : await shelly.lightStatus(d.ip, d.tipo);
     stato.set(d.id, { ...s, letto: Date.now() });
   } catch (e) {
     const prev = stato.get(d.id) || {};
@@ -71,7 +71,7 @@ export function snapshot() {
     casa: true,
     aggiornato: new Date().toISOString(),
     tapparelle: cfg.tapparelle.map(pick),
-    luci: cfg.luci.map(pick),
+    luci: cfg.luci.map((d) => ({ ...pick(d), regolabile: (d.tipo || "dimmer1") === "dimmer1" })),
     riquadri: cfg.riquadri,
     scene: cfg.scene.map((s) => ({ id: s.id, nome: s.nome })),
     tado: tado.snapshot(),
@@ -91,7 +91,7 @@ export async function comandaTapparelle(ids, azione, pos) {
 export async function comandaLuce(id, opt) {
   const d = cfg.luci.find((x) => x.id === id);
   if (!d) throw Object.assign(new Error("luce non trovata"), { status: 404 });
-  try { await shelly.lightCommand(d.ip, opt); } catch (e) { return [`${d.nome}: ${motivo(e)}`]; }
+  try { await shelly.lightCommand(d.ip, opt, d.tipo); } catch (e) { return [`${d.nome}: ${motivo(e)}`]; }
   followUp();
   return [];
 }
@@ -102,7 +102,7 @@ export async function scena(id) {
   if (s.tapparelle) errori.push(...await comandaTapparelle("tutte", s.tapparelle, s.posizione));
   if (s.luci) {
     for (const d of cfg.luci) {
-      try { await shelly.lightCommand(d.ip, { on: s.luci === "accendi" }); } catch (e) { errori.push(`${d.nome}: ${motivo(e)}`); }
+      try { await shelly.lightCommand(d.ip, { on: s.luci === "accendi" }, d.tipo); } catch (e) { errori.push(`${d.nome}: ${motivo(e)}`); }
     }
     followUp();
   }
