@@ -1,31 +1,16 @@
 {
- "updated": "2026-11-21T12:50:58.985Z",
+ "updated": "2026-11-28T13:20:56.961Z",
  "menus": {
   "9-4": {
    "municipio": "VII",
    "ciclo": "Infanzia",
    "days": [
     {
-     "date": "2026-11-23",
-     "spuntino": "Cracker",
-     "pranzo": [
-      "Pasta al pomodoro",
-      "Uova strapazzate/Frittata",
-      "Spinaci all'olio",
-      "Pane",
-      "Spremuta di arancia"
-     ],
-     "merenda": "Frutta di stagione con biscotti frollini al cacao",
-     "note": "",
-     "disponibile": true
-    },
-    {
-     "date": "2026-11-24",
+     "date": "2026-11-30",
      "spuntino": "Fette biscottate con cioccolata al latte/fondente",
      "pranzo": [
-      "Pasta al cavolfiore bianco",
-      "Straccetti di bovino",
-      "Finocchi al tegame",
+      "Lasagna",
+      "Fagiolini all'olio",
       "Pane",
       "Frutta"
      ],
@@ -34,44 +19,58 @@
      "disponibile": true
     },
     {
-     "date": "2026-11-25",
+     "date": "2026-12-01",
+     "spuntino": "Cracker",
+     "pranzo": [
+      "Riso con piselli",
+      "Tortino di limanda",
+      "Patate all'olio",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Succo di frutta senza zuccheri aggiunti e biscotti frollini al miele",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-12-02",
+     "spuntino": "Schiacciatine",
+     "pranzo": [
+      "Pasta al burro e parmigiano",
+      "Petto o bocconcini di pollo al limone",
+      "Spinaci all'olio",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Panino all'olio con marmellata",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-12-03",
+     "spuntino": "Yogurt",
+     "pranzo": [
+      "Pasta alla pizzaiola",
+      "Crescenza",
+      "Carote al tegame",
+      "Pane",
+      "Frutta"
+     ],
+     "merenda": "Focaccia bianca",
+     "note": "",
+     "disponibile": true
+    },
+    {
+     "date": "2026-12-04",
      "spuntino": "Plum cake allo yogurt",
      "pranzo": [
-      "Risotto con zucca",
-      "Caciotta dolce",
-      "Insalata verde",
+      "Pasta con legumi misti",
+      "Uova strapazzate/Frittata",
+      "Broccoli romaneschi all'olio",
       "Pane",
       "Frutta"
      ],
      "merenda": "Banana",
-     "note": "",
-     "disponibile": true
-    },
-    {
-     "date": "2026-11-26",
-     "spuntino": "Schiacciatine",
-     "pranzo": [
-      "Crema di ceci con pasta",
-      "Fuso di pollo arrosto",
-      "Fagiolini all'olio",
-      "Pane",
-      "Frutta"
-     ],
-     "merenda": "Ciambellone",
-     "note": "",
-     "disponibile": true
-    },
-    {
-     "date": "2026-11-27",
-     "spuntino": "Yogurt",
-     "pranzo": [
-      "Pasta all'olio e parmigiano",
-      "Bastoncini di merluzzo della cuoca",
-      "Carote alla julienne",
-      "Pane integrale",
-      "Frutta"
-     ],
-     "merenda": "Focaccia rossa soffice",
      "note": "",
      "disponibile": true
     }
